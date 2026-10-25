@@ -2,314 +2,281 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Control de Videos por Gestos</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#05070d">
+<title>Control por Gestos · IA Holográfica</title>
 <style>
-  :root{ --verde:#38ffb0; --cian:#00d1ff; --fondo:#05070d; }
-  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-  html,body{ height:100%; margin:0; background:var(--fondo); color:#e8f6ff;
-    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; overflow:hidden; }
-
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; margin:0; padding:0; }
+  html,body{ height:100%; overflow:hidden; }
+  body{ background:#05070d; color:#e8f6ff; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }
   #app{ position:fixed; inset:0; display:flex; flex-direction:column; }
 
-  /* ─── Reproductor de video (arriba) ─── */
-  #reproductor{ flex:0 0 45%; background:#000; position:relative; overflow:hidden; }
-  #reproductor video{ width:100%; height:100%; object-fit:contain; display:block; }
-  #sinVideo{
-    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-    color:#5a8ba8; font-size:14px; text-align:center; padding:20px;
-    background:#000;
-  }
+  #reproductor{ flex:0 0 45%; background:#000; position:relative; overflow:hidden;
+    display:flex; align-items:center; justify-content:center; }
+  #video{ width:100%; height:100%; object-fit:contain; }
+  #mensajeVideo{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    color:#5a8ba8; font-size:13px; text-align:center; padding:20px; background:#000; }
+  #mensajeVideo.oculto{ display:none; }
 
-  /* ─── Zona de cámara (abajo) ─── */
   #camZone{ flex:1; position:relative; overflow:hidden; background:#000; }
-  #cam{
-    position:absolute; inset:0; width:100%; height:100%;
-    object-fit:cover; transform:scaleX(-1);
-  }
+  #cam{ position:absolute; inset:0; width:100%; height:100%;
+    object-fit:cover; transform:scaleX(-1); }
   #overlay{ position:absolute; inset:0; width:100%; height:100%; }
 
-  /* ─── HUD ─── */
-  #hud{
-    position:absolute; top:8px; left:8px; right:8px;
-    display:flex; gap:6px; flex-wrap:wrap;
-    pointer-events:none; font-size:12px; z-index:5;
-  }
-  .chip{
-    background:rgba(6,14,24,.8); border:1px solid rgba(56,255,176,.35);
-    border-radius:999px; padding:4px 10px; backdrop-filter:blur(6px);
-  }
-  .chip b{ color:var(--verde); }
+  #hud{ position:absolute; top:6px; left:6px; right:6px; display:flex;
+    gap:5px; flex-wrap:wrap; z-index:5; pointer-events:none; font-size:11px; }
+  .chip{ background:rgba(6,14,24,.78); border:1px solid rgba(56,255,176,.35);
+    border-radius:999px; padding:3px 9px; backdrop-filter:blur(6px); }
+  .chip b{ color:#38ffb0; }
 
-  #ayuda{
-    position:absolute; bottom:8px; left:8px;
-    background:rgba(6,14,24,.85); border-radius:10px;
-    padding:8px 12px; font-size:11px; line-height:1.6;
-    color:#8fb4c9; z-index:4; pointer-events:none;
-  }
-  #ayuda b{ color:var(--verde); }
+  #progreso{ position:absolute; bottom:8px; left:8px; right:8px;
+    background:rgba(6,14,24,.85); border-radius:8px; padding:6px 10px;
+    font-size:12px; z-index:5; display:none; }
+  #progreso.visible{ display:block; }
+  #progresoTexto{ color:#e8f6ff; font-weight:600; }
+  #progresoBarra{ height:5px; background:#1a2f45; border-radius:3px;
+    overflow:hidden; margin-top:5px; }
+  #progresoFill{ height:100%; background:#38ffb0; width:0%; transition:width .08s linear; }
 
-  /* ─── Pantallas superpuestas ─── */
-  .pantalla{
-    position:absolute; inset:0; background:rgba(3,6,12,.96);
+  .pantalla{ position:absolute; inset:0; background:rgba(3,6,12,.96);
     display:flex; flex-direction:column; align-items:center; justify-content:center;
-    gap:14px; padding:24px; text-align:center; z-index:20;
-  }
-  .pantalla h1{ margin:0; font-size:19px; font-weight:600; }
-  .pantalla p{ margin:0; color:#8fb4c9; font-size:13px; max-width:340px; line-height:1.5; }
-  .pantalla button{
-    background:var(--verde); color:#04140d; border:0;
-    border-radius:999px; padding:12px 28px; font-size:15px; font-weight:700;
-  }
-  .pantalla button.sec{
-    background:transparent; color:var(--verde); border:1.5px solid var(--verde);
-  }
-  .oculto{ display:none !important; }
+    gap:14px; padding:24px; text-align:center; z-index:20; }
+  .pantalla.oculto{ display:none; }
+  .pantalla h1{ font-size:18px; font-weight:600; }
+  .pantalla p{ font-size:12px; color:#8fb4c9; max-width:340px; line-height:1.5; }
+  .pantalla button{ background:#38ffb0; color:#04140d; border:0;
+    border-radius:999px; padding:12px 28px; font-size:14px; font-weight:700;
+    cursor:pointer; min-width:200px; }
+  .pantalla button:disabled{ opacity:.5; }
+  .pantalla button.sec{ background:transparent; color:#38ffb0; border:1.5px solid #38ffb0; }
+  #estado{ font-size:12px; color:#38ffb0; min-height:16px; }
+  #error{ color:#ff7b7b; font-size:12px; max-width:340px; line-height:1.4; }
 
-  #configPanel{
-    width:100%; max-width:420px; display:flex; flex-direction:column;
-    gap:10px; max-height:70vh; overflow-y:auto; padding:4px;
-  }
-  #configPanel label{
-    display:flex; flex-direction:column; gap:4px;
-    font-size:12px; color:#8fb4c9; text-align:left;
-  }
-  #configPanel input{
-    background:#0a1420; border:1px solid #1e344a; color:#e8f6ff;
-    padding:9px 11px; border-radius:8px; font-size:13px;
-  }
-  #error{ color:#ff7b7b; font-size:12px; max-width:340px; line-height:1.5; }
+  #configPanel{ width:100%; max-width:400px; display:flex; flex-direction:column;
+    gap:8px; max-height:60vh; overflow-y:auto; }
+  #configPanel label{ display:flex; flex-direction:column; gap:3px;
+    font-size:11px; color:#8fb4c9; text-align:left; }
+  #configPanel input{ background:#0a1420; border:1px solid #1e344a; color:#e8f6ff;
+    padding:8px 10px; border-radius:6px; font-size:12px; }
+
+  #ayuda{ position:absolute; top:38px; left:6px; background:rgba(6,14,24,.85);
+    border-radius:8px; padding:6px 10px; font-size:10px; line-height:1.6;
+    color:#8fb4c9; z-index:4; pointer-events:none; display:none; }
+  #ayuda.visible{ display:block; }
+  #ayuda b{ color:#38ffb0; }
+
+  #btnAyuda, #btnMute{ position:absolute; bottom:8px; width:36px; height:36px;
+    border-radius:50%; background:rgba(6,14,24,.85);
+    border:1px solid rgba(56,255,176,.5); color:#38ffb0; font-size:14px;
+    z-index:10; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  #btnAyuda{ right:8px; font-weight:700; font-size:16px; }
+  #btnMute{ right:52px; }
 </style>
 </head>
 <body>
-
 <div id="app">
 
-  <!-- VIDEO PLAYER -->
   <div id="reproductor">
-    <video id="video" playsinline loop></video>
-    <div id="sinVideo">Presiona un gesto para reproducir un video</div>
+    <video id="video" playsinline loop muted></video>
+    <div id="mensajeVideo">Muestra un gesto frente a la cámara para reproducir un video</div>
   </div>
 
-  <!-- CÁMARA + DETECCIÓN -->
   <div id="camZone">
     <video id="cam" playsinline muted autoplay></video>
     <canvas id="overlay"></canvas>
 
     <div id="hud">
       <div class="chip">FPS <b id="fps">0</b></div>
-      <div class="chip">Gesto <b id="chipGesto">—</b></div>
-      <div class="chip">Video <b id="chipVideo">—</b>/5</div>
+      <div class="chip">Gesto <b id="gestoActual">—</b></div>
+      <div class="chip">Video <b id="videoActual">—</b>/5</div>
+    </div>
+
+    <div id="progreso">
+      <div id="progresoTexto">—</div>
+      <div id="progresoBarra"><div id="progresoFill"></div></div>
     </div>
 
     <div id="ayuda">
-      <div><b>1-5 dedos</b> → Video 1-5</div>
-      <div><b>Puño</b> → Play/Pausa</div>
+      <div><b>☝️ Índice</b> → Video 1</div>
+      <div><b>✌️ Índice+Medio</b> → Video 2</div>
+      <div><b>🤟 3 dedos</b> → Video 3</div>
+      <div><b>🤙 Pulgar+Meñique</b> → Video 4</div>
+      <div><b>🖐️ 5 dedos</b> → Video 5</div>
+      <div><b>✊ Puño</b> → Play/Pausa</div>
       <div><b>👍 Pulgar arriba</b> → Siguiente</div>
+      <div style="margin-top:4px; color:#5a8ba8;">Mantén 1.2s cada gesto</div>
     </div>
+
+    <button id="btnMute">🔇</button>
+    <button id="btnAyuda">?</button>
   </div>
 
-  <!-- PANTALLA DE INICIO -->
   <div id="inicio" class="pantalla">
     <h1>🤖 Control por Gestos</h1>
-    <p>Detecta tus manos y controla los 5 videos con señas. Presiona Iniciar y permite la cámara.</p>
+    <p>Controla 5 videos con señas. Mantén cada gesto 1.2 segundos para activarlo.</p>
+    <div id="estado">Pulsa Iniciar para comenzar</div>
     <button id="btnIniciar">Iniciar cámara</button>
-    <button id="btnConfig" class="sec">Configurar los 5 videos</button>
+    <button id="btnConfig" class="sec">⚙️ Configurar URLs</button>
     <div id="error"></div>
   </div>
 
-  <!-- CONFIGURACIÓN -->
   <div id="config" class="pantalla oculto">
     <h1>⚙️ URLs de los videos</h1>
-    <p>Pega el enlace directo (.mp4, .webm). YouTube/Vimeo NO funcionan aquí, solo URLs directas de video.</p>
+    <p>Enlaces directos (.mp4). No YouTube/Drive.</p>
     <div id="configPanel"></div>
-    <button id="btnGuardar">Guardar y volver</button>
+    <button id="btnGuardar">Guardar</button>
     <button id="btnCancelar" class="sec">Cancelar</button>
   </div>
-
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/hands.js" crossorigin="anonymous"></script>
-
 <script>
-/* ================================================================
-   ⬇️⬇️⬇️  AQUÍ VAN LOS 5 VIDEOS  ⬇️⬇️⬇️
-   Pega tus enlaces, uno por posición. Deben ser URLs directas
-   a un archivo .mp4 / .webm / .ogg (NO YouTube, NO Drive "share").
-   ================================================================ */
-const VIDEOS_DEFAULT = [
-'Vid1.mp4'
-  'Vid2.mp4'
-  'vid3.mp4'
-  'Vid4.mp4'
-  'Vid5.mp4'
-];
-/* ================================================================ */
+/* ==================== CONFIG ==================== */
+let VIDEOS = ['video1.mp4','video2.mp4','video3.mp4','video4.mp4','video5.mp4'];
+try {
+  const s = localStorage.getItem('ia_gestos_videos');
+  if (s) { const a = JSON.parse(s); if (Array.isArray(a) && a.length===5) VIDEOS = a; }
+} catch(e) {}
 
-const MAX_MANOS = 2;
-const INVERTIR_ETIQUETA = true;   // si "Derecha/Izquierda" sale al revés, cambia a false
-const COOLDOWN = 900;             // ms mínimos entre acciones
+const COMANDOS = {
+  'indice':                             { tipo:'video',     valor:0, nombre:'☝️ Video 1' },
+  'indice_medio':                       { tipo:'video',     valor:1, nombre:'✌️ Video 2' },
+  'indice_medio_anular':                { tipo:'video',     valor:2, nombre:'🤟 Video 3' },
+  'menique_pulgar':                     { tipo:'video',     valor:3, nombre:'🤙 Video 4' },
+  'anular_indice_medio_menique_pulgar': { tipo:'video',     valor:4, nombre:'🖐️ Video 5' },
+  'nada':                               { tipo:'playpause',          nombre:'✊ Play/Pausa' },
+  'pulgar_arriba':                      { tipo:'siguiente',          nombre:'👍 Siguiente' }
+};
+
+const CONFIG = {
+  framesRequeridos: 28,
+  framesReset: 15,
+  cooldownMs: 700,
+  fingerThreshold: 1.18,
+  thumbThreshold: 1.35,
+  mediapipeBase: 'https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240'
+};
+
+const estado = {
+  hands:null, corriendo:false, indiceVideo:0,
+  gestoActual:null, framesEstables:0,
+  esperandoNeutro:false, comandoEjecutado:null,
+  framesSinManos:0, ultimaAccion:0
+};
+
+const cam = document.getElementById('cam');
+const video = document.getElementById('video');
+const canvas = document.getElementById('overlay');
+const ctx = canvas.getContext('2d');
+let cw=0, ch=0, fps=0, framesFps=0, tFps=performance.now(), lastSend=0;
 
 const $ = id => document.getElementById(id);
-const cam = $('cam');
-const video = $('video');
-const canvas = $('overlay');
-const ctx = canvas.getContext('2d');
+const setEstado = m => { const e=$('estado'); if(e) e.textContent=m; };
+const setError  = m => { const e=$('error');  if(e) e.textContent=m; };
 
-let VIDEOS = [];
-let indiceActual = 0;
-let corriendo = false;
-let frames = 0, fps = 0, tFps = performance.now();
-let cw = 0, ch = 0;
-
-let ultimaAccion = 0;
-let gestoAnterior = null;
-let ultimoTipo = null;
-let contadorEstable = 0;
-
-/* ─── Config ─────────────────────────────────────────────── */
-function cargarConfig(){
-  try{
-    const s = localStorage.getItem('videos_ia_gestos');
-    if(s){
-      const a = JSON.parse(s);
-      if(Array.isArray(a) && a.length === 5) return a;
-    }
-  }catch(e){}
-  return VIDEOS_DEFAULT.slice();
-}
-
-function construirPanelConfig(){
-  const p = $('configPanel'); p.innerHTML = '';
-  for(let i=0; i<5; i++){
-    const lbl = document.createElement('label');
-    lbl.textContent = 'Video ' + (i+1);
-    const inp = document.createElement('input');
-    inp.id = 'url'+i; inp.type = 'url';
-    inp.placeholder = 'https://ejemplo.com/video.mp4';
-    inp.value = VIDEOS[i] || '';
-    lbl.appendChild(inp);
-    p.appendChild(lbl);
-  }
-}
-
-/* ─── Canvas ─────────────────────────────────────────────── */
-function ajustar(){
+function ajustarCanvas(){
   const r = canvas.getBoundingClientRect();
   cw = canvas.width  = Math.round(r.width);
   ch = canvas.height = Math.round(r.height);
 }
-window.addEventListener('resize', ajustar);
-window.addEventListener('orientationchange', () => setTimeout(ajustar, 350));
+window.addEventListener('resize', ajustarCanvas);
+window.addEventListener('orientationchange', () => setTimeout(ajustarCanvas, 300));
 
 function proy(lm){
-  const vw = cam.videoWidth || 1, vh = cam.videoHeight || 1;
-  const s  = Math.max(cw / vw, ch / vh);
-  const dw = vw * s, dh = vh * s;
-  const ox = (cw - dw)/2, oy = (ch - dh)/2;
-  return { x: cw - (ox + lm.x * dw), y: oy + lm.y * dh };
+  const vw=cam.videoWidth||640, vh=cam.videoHeight||480;
+  const s=Math.max(cw/vw, ch/vh);
+  const dw=vw*s, dh=vh*s;
+  const ox=(cw-dw)/2, oy=(ch-dh)/2;
+  return { x: cw-(ox+lm.x*dw), y: oy+lm.y*dh };
 }
 
-/* ─── Detección de gestos ────────────────────────────────── */
-function analizarMano(lm, esDerecha){
-  const indiceUp  = lm[8].y  < lm[6].y  - 0.03;
-  const medioUp   = lm[12].y < lm[10].y - 0.03;
-  const anularUp  = lm[16].y < lm[14].y - 0.03;
-  const meniqueUp = lm[20].y < lm[18].y - 0.03;
+function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y, (a.z||0)-(b.z||0)); }
 
-  // Pulgar lateral (para conteo normal)
-  const dx = lm[4].x - lm[3].x;
-  const pulgarLateral = esDerecha ? dx < -0.015 : dx > 0.015;
+function analizarMano(lm){
+  const w = lm[0];
+  const indice  = dist(lm[8], w)  > dist(lm[5], w)  * CONFIG.fingerThreshold;
+  const medio   = dist(lm[12], w) > dist(lm[9], w)  * CONFIG.fingerThreshold;
+  const anular  = dist(lm[16], w) > dist(lm[13], w) * CONFIG.fingerThreshold;
+  const menique = dist(lm[20], w) > dist(lm[17], w) * CONFIG.fingerThreshold;
+  const pulgar  = dist(lm[4], lm[5]) > dist(lm[2], lm[5]) * CONFIG.thumbThreshold;
 
-  // Pulgar arriba (para gesto "👍")
-  const pulgarArriba =
-    lm[4].y < lm[3].y - 0.01 &&
-    lm[3].y < lm[2].y - 0.01;
+  const pulgarArriba = pulgar && !indice && !medio && !anular && !menique
+    && lm[4].y < lm[3].y - 0.015
+    && lm[3].y < lm[2].y - 0.015;
 
-  const esPulgarArriba = pulgarArriba &&
-    !indiceUp && !medioUp && !anularUp && !meniqueUp;
+  if (pulgarArriba) return { patron:'pulgar_arriba', dedos:1 };
 
-  const pulgarExtendido = pulgarLateral || pulgarArriba;
-  const total = (indiceUp?1:0)+(medioUp?1:0)+(anularUp?1:0)+(meniqueUp?1:0)+(pulgarExtendido?1:0);
+  const a=[];
+  if(anular)  a.push('anular');
+  if(indice)  a.push('indice');
+  if(medio)   a.push('medio');
+  if(menique) a.push('menique');
+  if(pulgar)  a.push('pulgar');
 
-  let tipo = 'ninguno';
-  if(esPulgarArriba) tipo = 'siguiente';
-  else if(total === 0) tipo = 'playpause';
-  else if(total >= 1 && total <= 5) tipo = 'video';
-
-  return { tipo, dedos: total };
+  return { patron: a.length===0 ? 'nada' : a.join('_'), dedos:a.length };
 }
 
-function nombreGesto(g){
-  if(g.tipo === 'siguiente') return '👍 Siguiente';
-  if(g.tipo === 'playpause') return 'Puño · Play/Pausa';
-  if(g.tipo === 'video') return g.dedos + ' dedo' + (g.dedos===1?'':'s') + ' → Video ' + g.dedos;
-  return '—';
-}
-
-/* ─── Acciones ───────────────────────────────────────────── */
-function cargarVideo(idx){
-  if(idx < 0 || idx >= VIDEOS.length) return;
-  const url = VIDEOS[idx];
-  indiceActual = idx;
-  $('chipVideo').textContent = idx + 1;
-
-  if(!url){
-    $('sinVideo').textContent = 'Video ' + (idx+1) + ' no configurado (abre ⚙️ Configurar)';
-    $('sinVideo').classList.remove('oculto');
-    video.style.display = 'none';
-    video.removeAttribute('src');
-    return;
+function procesarPatron(patron){
+  if (estado.esperandoNeutro && patron !== estado.comandoEjecutado){
+    estado.esperandoNeutro = false;
+    estado.comandoEjecutado = null;
   }
+  if (estado.esperandoNeutro) return;
 
-  $('sinVideo').classList.add('oculto');
-  video.style.display = 'block';
+  if (patron === estado.gestoActual) estado.framesEstables++;
+  else { estado.gestoActual = patron; estado.framesEstables = 1; }
+
+  if (estado.framesEstables >= CONFIG.framesRequeridos){
+    const cmd = COMANDOS[patron];
+    const ahora = performance.now();
+    if (cmd && (ahora - estado.ultimaAccion) > CONFIG.cooldownMs){
+      ejecutarComando(cmd);
+      estado.ultimaAccion = ahora;
+      estado.esperandoNeutro = true;
+      estado.comandoEjecutado = patron;
+      estado.framesEstables = 0;
+    }
+  }
+}
+
+function ejecutarComando(cmd){
+  if (cmd.tipo==='video') cargarVideo(cmd.valor);
+  else if (cmd.tipo==='playpause') togglePlay();
+  else if (cmd.tipo==='siguiente') cargarVideo((estado.indiceVideo+1)%VIDEOS.length);
+}
+
+function cargarVideo(idx){
+  if (idx<0 || idx>=VIDEOS.length) return;
+  const url = (VIDEOS[idx]||'').trim();
+  if (!url){ mostrarMensaje('Video '+(idx+1)+' sin URL'); return; }
+  estado.indiceVideo = idx;
   video.src = url;
-  video.load();
-  video.muted = false;
-  video.play().catch(() => {
-    // Fallback si el navegador bloquea autoplay con sonido
+  video.currentTime = 0;
+  video.play().catch(e => {
+    console.warn('Play falló, reintento silenciado:', e);
     video.muted = true;
-    video.play().catch(e => console.warn('No se pudo reproducir:', e));
+    video.play().catch(() => mostrarMensaje('No se pudo reproducir Video '+(idx+1)));
   });
+  ocultarMensaje();
+  $('videoActual').textContent = idx + 1;
 }
 
 function togglePlay(){
-  if(!video.src) return;
-  if(video.paused) video.play().catch(e=>console.warn(e));
+  if (!video.src) return;
+  if (video.paused) video.play().catch(e=>console.warn(e));
   else video.pause();
 }
 
-function siguienteVideo(){
-  cargarVideo((indiceActual + 1) % VIDEOS.length);
+function mostrarMensaje(m){
+  const el=$('mensajeVideo'); el.textContent=m;
+  el.classList.remove('oculto'); video.style.visibility='hidden';
+}
+function ocultarMensaje(){
+  $('mensajeVideo').classList.add('oculto'); video.style.visibility='visible';
 }
 
-function procesarGesto(gesto){
-  if(!gesto || gesto.tipo === 'ninguno') return;
-  const ahora = Date.now();
-  const key = gesto.tipo + '_' + gesto.dedos;
-
-  if(key === gestoAnterior) return;                // ya se ejecutó este mismo gesto
-  if((ahora - ultimaAccion) < COOLDOWN) return;    // cooldown global
-
-  if(gesto.tipo === 'video')          cargarVideo(gesto.dedos - 1);
-  else if(gesto.tipo === 'siguiente')  siguienteVideo();
-  else if(gesto.tipo === 'playpause')  togglePlay();
-
-  ultimaAccion = ahora;
-  gestoAnterior = key;
-}
-
-/* ─── Dibujo ─────────────────────────────────────────────── */
-const CONEXIONES = [
-  [0,1],[1,2],[2,3],[3,4],
-  [0,5],[5,6],[6,7],[7,8],
-  [5,9],[9,10],[10,11],[11,12],
-  [9,13],[13,14],[14,15],[15,16],
-  [13,17],[17,18],[18,19],[19,20],
-  [0,17]
-];
-const COLORES = ['#38ffb0', '#00d1ff'];
+const CONEXIONES=[[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],
+  [10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[13,17],[17,18],[18,19],[19,20],[0,17]];
+const COLORES=['#38ffb0','#00d1ff'];
 
 function rrect(x,y,w,h,r){
   ctx.beginPath();
@@ -321,189 +288,229 @@ function rrect(x,y,w,h,r){
   ctx.closePath();
 }
 
-function dibujarMano(lm, idx, lado, info){
-  const color  = COLORES[idx % COLORES.length];
-  const pts    = lm.map(proy);
-  const grosor = Math.max(2, Math.round(cw / 180));
-  const radio  = Math.max(2.5, grosor * 1.5);
+function dibujarMano(lm,idx,esActiva,patron){
+  const color=COLORES[idx%COLORES.length];
+  const pts=lm.map(proy);
+  const gr=Math.max(2,Math.round(cw/200));
+  const rad=Math.max(2,gr*1.5);
 
-  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-  ctx.strokeStyle = color; ctx.lineWidth = grosor;
-  ctx.globalAlpha = 0.9;
+  ctx.lineCap='round'; ctx.lineJoin='round';
+  ctx.strokeStyle=color; ctx.lineWidth=gr;
+  ctx.globalAlpha = esActiva ? 0.9 : 0.4;
   ctx.beginPath();
   for(const [a,b] of CONEXIONES){
-    ctx.moveTo(pts[a].x, pts[a].y);
-    ctx.lineTo(pts[b].x, pts[b].y);
+    ctx.moveTo(pts[a].x,pts[a].y);
+    ctx.lineTo(pts[b].x,pts[b].y);
   }
   ctx.stroke();
 
-  ctx.globalAlpha = 1; ctx.fillStyle = color;
-  for(let i=0; i<pts.length; i++){
+  ctx.globalAlpha = esActiva ? 1 : 0.5;
+  ctx.fillStyle = color;
+  for(let i=0;i<pts.length;i++){
     ctx.beginPath();
-    ctx.arc(pts[i].x, pts[i].y, i===0 ? radio*1.5 : radio, 0, Math.PI*2);
+    ctx.arc(pts[i].x,pts[i].y, i===0?rad*1.4:rad, 0, Math.PI*2);
     ctx.fill();
   }
 
-  let minY = Infinity, sx = 0;
-  for(const p of pts) if(p.y < minY){ minY = p.y; sx = p.x; }
-  etiqueta(`Mano ${idx+1} · ${lado} · ${nombreGesto(info)}`, sx, minY, color);
+  if (esActiva){
+    let minY=Infinity, sx=0;
+    for(const p of pts) if(p.y<minY){ minY=p.y; sx=p.x; }
+    const cmd = COMANDOS[patron];
+    etiqueta(cmd ? cmd.nombre : '❓ '+patron, sx, minY, color);
+  }
+  ctx.globalAlpha=1;
 }
 
-function etiqueta(texto, x, y, color){
-  const fs  = Math.max(10, Math.round(cw / 45));
-  const pad = Math.round(fs * 0.5);
-  ctx.font = `600 ${fs}px system-ui, -apple-system, sans-serif`;
-  const w = ctx.measureText(texto).width + pad*2;
-  const h = fs + pad*2;
-  let bx = Math.max(4, Math.min(cw - w - 4, x - w/2));
-  let by = y - h - 8;
-  if(by < 4) by = y + 12;
+function etiqueta(texto,x,y,color){
+  const fs=Math.max(10,Math.round(cw/45));
+  const pad=Math.round(fs*0.5);
+  ctx.font='600 '+fs+'px -apple-system,sans-serif';
+  const w=ctx.measureText(texto).width+pad*2;
+  const h=fs+pad*2;
+  let bx=Math.max(4,Math.min(cw-w-4,x-w/2));
+  let by=y-h-8; if(by<4) by=y+12;
 
-  ctx.fillStyle = 'rgba(4,10,18,.78)';
-  rrect(bx,by,w,h,7); ctx.fill();
-  ctx.strokeStyle = color; ctx.lineWidth = 1.5;
-  rrect(bx,by,w,h,7); ctx.stroke();
-
-  ctx.fillStyle = color;
-  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-  ctx.fillText(texto, bx + pad, by + h/2);
+  ctx.fillStyle='rgba(4,10,18,.85)';
+  rrect(bx,by,w,h,6); ctx.fill();
+  ctx.strokeStyle=color; ctx.lineWidth=1.5;
+  rrect(bx,by,w,h,6); ctx.stroke();
+  ctx.fillStyle=color; ctx.textAlign='left'; ctx.textBaseline='middle';
+  ctx.fillText(texto,bx+pad,by+h/2);
 }
-
-/* ─── MediaPipe ──────────────────────────────────────────── */
-const hands = new Hands({
-  locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${f}`
-});
-
-hands.setOptions({
-  maxNumHands: MAX_MANOS,
-  modelComplexity: 0,
-  minDetectionConfidence: 0.6,
-  minTrackingConfidence: 0.5
-});
-
-hands.onResults(onResults);
 
 function onResults(res){
-  frames++;
-  const ahora = performance.now();
-  if(ahora - tFps >= 1000){
-    fps = Math.round(frames*1000/(ahora - tFps));
-    frames = 0; tFps = ahora;
-    $('fps').textContent = fps;
+  framesFps++;
+  const ahora=performance.now();
+  if(ahora-tFps>=1000){
+    fps=Math.round(framesFps*1000/(ahora-tFps));
+    framesFps=0; tFps=ahora;
+    $('fps').textContent=fps;
   }
+  ctx.clearRect(0,0,cw,ch);
 
-  ctx.clearRect(0, 0, cw, ch);
-
-  const manos     = res.multiHandLandmarks || [];
-  const etiquetas = res.multiHandedness    || [];
-  let gestoMostrado = null;
-
-  for(let i=0; i<manos.length; i++){
-    let et = etiquetas[i] ? etiquetas[i].label : 'Desconocida';
-    if(INVERTIR_ETIQUETA) et = (et === 'Right') ? 'Left' : 'Right';
-    const esDerecha = (et === 'Right');
-    const lado = esDerecha ? 'Derecha' : 'Izquierda';
-
-    const info = analizarMano(manos[i], esDerecha);
-    dibujarMano(manos[i], i, lado, info);
-
-    // La primera mano detectada manda
-    if(i === 0 && info.tipo !== 'ninguno') gestoMostrado = info;
-  }
-
-  $('chipGesto').textContent = gestoMostrado ? nombreGesto(gestoMostrado) : '—';
-
-  if(gestoMostrado){
-    const key = gestoMostrado.tipo + '_' + gestoMostrado.dedos;
-    if(key === ultimoTipo) contadorEstable++;
-    else { contadorEstable = 1; ultimoTipo = key; }
-
-    // Requiere 3 frames seguidos con el mismo gesto para evitar falsos positivos
-    if(contadorEstable >= 3) procesarGesto(gestoMostrado);
-  } else {
-    ultimoTipo = null;
-    contadorEstable = 0;
-    gestoAnterior = null;
-  }
-}
-
-/* ─── Bucle ──────────────────────────────────────────────── */
-async function bucle(){
-  if(!corriendo) return;
-  if(cam.readyState >= 2){
-    try { await hands.send({ image: cam }); } catch(e){}
-  }
-  if(corriendo) requestAnimationFrame(bucle);
-}
-
-/* ─── UI ─────────────────────────────────────────────────── */
-$('btnIniciar').addEventListener('click', async () => {
-  $('error').textContent = '';
-  const btn = $('btnIniciar');
-  btn.disabled = true; btn.textContent = 'Iniciando…';
-
-  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
-    $('error').textContent = 'Este navegador no soporta cámara. Abre la página con HTTPS o en localhost.';
-    btn.disabled = false; btn.textContent = 'Iniciar cámara';
+  const manos = res.multiHandLandmarks || [];
+  if (manos.length===0){
+    estado.framesSinManos++;
+    if (estado.framesSinManos>CONFIG.framesReset){
+      estado.esperandoNeutro=false;
+      estado.comandoEjecutado=null;
+      estado.gestoActual=null;
+      estado.framesEstables=0;
+    }
+    $('gestoActual').textContent='—';
+    actualizarProgreso(null);
     return;
   }
+  estado.framesSinManos=0;
+
+  const info = analizarMano(manos[0]);
+  for(let i=0;i<manos.length;i++){
+    dibujarMano(manos[i], i, i===0, i===0?info.patron:null);
+  }
+
+  const cmd = COMANDOS[info.patron];
+  $('gestoActual').textContent = cmd ? cmd.nombre : (info.patron||'—');
+  procesarPatron(info.patron);
+  actualizarProgreso(info.patron);
+}
+
+let lastProgressUpdate=0;
+function actualizarProgreso(patron){
+  const ahora=performance.now();
+  if(ahora-lastProgressUpdate<60) return;
+  lastProgressUpdate=ahora;
+  const cmd=COMANDOS[patron];
+  const box=$('progreso');
+  if(!cmd || estado.esperandoNeutro){ box.classList.remove('visible'); return; }
+  box.classList.add('visible');
+  const pct=Math.min(100,(estado.framesEstables/CONFIG.framesRequeridos)*100);
+  $('progresoTexto').textContent = cmd.nombre+' · '+Math.round(pct)+'%';
+  $('progresoFill').style.width = pct+'%';
+}
+
+let handsPromise=null;
+function cargarMediaPipe(){
+  if (handsPromise) return handsPromise;
+  handsPromise = new Promise((resolve,reject)=>{
+    if (window.Hands) return resolve();
+    const s=document.createElement('script');
+    s.src=CONFIG.mediapipeBase+'/hands.js';
+    s.crossOrigin='anonymous';
+    s.onload=()=> window.Hands ? resolve() : reject(new Error('Hands no disponible'));
+    s.onerror=()=> reject(new Error('No se pudo cargar MediaPipe'));
+    document.head.appendChild(s);
+  });
+  return handsPromise;
+}
+
+async function bucle(){
+  if(!estado.corriendo) return;
+  const ahora=performance.now();
+  if(cam.readyState>=2 && ahora-lastSend>40 && estado.hands){
+    lastSend=ahora;
+    try{ await estado.hands.send({image:cam}); } catch(e){}
+  }
+  if(estado.corriendo) requestAnimationFrame(bucle);
+}
+
+async function iniciar(){
+  const btn=$('btnIniciar');
+  btn.disabled=true; btn.textContent='Iniciando...';
+  setError('');
 
   try{
+    setEstado('1/4 · Cargando MediaPipe...');
+    await cargarMediaPipe();
+
+    setEstado('2/4 · Solicitando cámara...');
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+      throw new Error('Tu navegador no soporta cámara. Necesitas HTTPS.');
+    }
     const stream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: 'user',
-        width: { ideal: 480 },
-        height: { ideal: 360 },
-        frameRate: { ideal: 24, max: 30 }
-      },
-      audio: false
+      video:{ facingMode:'user', width:{ideal:480}, height:{ideal:360},
+        frameRate:{ideal:24, max:30} },
+      audio:false
     });
     cam.srcObject = stream;
     await cam.play();
 
-    ajustar();
-    try { await hands.initialize(); } catch(e){}
+    setEstado('3/4 · Iniciando detector...');
+    estado.hands = new Hands({ locateFile: f => CONFIG.mediapipeBase+'/'+f });
+    estado.hands.setOptions({
+      maxNumHands:2,
+      modelComplexity:0,
+      minDetectionConfidence:0.6,
+      minTrackingConfidence:0.5
+    });
+    estado.hands.onResults(onResults);
 
+    setEstado('4/4 · Calibrando...');
+    await estado.hands.send({ image: cam });
+
+    ajustarCanvas();
+    estado.corriendo = true;
     $('inicio').classList.add('oculto');
-    corriendo = true;
+    $('ayuda').classList.add('visible');
 
-    // Precarga el video 1 si hay URL
-    if(VIDEOS[0]) cargarVideo(0);
-
+    if (VIDEOS[0] && VIDEOS[0].trim()) cargarVideo(0);
     bucle();
+
   } catch(e){
     console.error(e);
-    $('error').textContent = 'No se pudo abrir la cámara: ' + (e.message || e.name) +
-      '. Debe abrirse con HTTPS o en localhost.';
-    btn.disabled = false; btn.textContent = 'Reintentar';
+    setError('Error: ' + (e.message||e.name));
+    setEstado('Falló el inicio');
+    btn.disabled=false; btn.textContent='Reintentar';
   }
-});
+}
 
-$('btnConfig').addEventListener('click', () => {
+document.getElementById('btnIniciar').addEventListener('click', iniciar);
+
+document.getElementById('btnConfig').addEventListener('click', ()=>{
   construirPanelConfig();
   $('inicio').classList.add('oculto');
   $('config').classList.remove('oculto');
 });
 
-$('btnGuardar').addEventListener('click', () => {
-  const urls = [];
-  for(let i=0; i<5; i++) urls.push(($('url'+i).value || '').trim());
+document.getElementById('btnGuardar').addEventListener('click', ()=>{
+  const urls=[];
+  for(let i=0;i<5;i++) urls.push(($('url'+i).value||'').trim());
   VIDEOS = urls;
-  localStorage.setItem('videos_ia_gestos', JSON.stringify(urls));
+  try{ localStorage.setItem('ia_gestos_videos', JSON.stringify(urls)); }catch(e){}
   $('config').classList.add('oculto');
   $('inicio').classList.remove('oculto');
-  if(VIDEOS[indiceActual]) cargarVideo(indiceActual);
+  if (VIDEOS[estado.indiceVideo]) cargarVideo(estado.indiceVideo);
 });
 
-$('btnCancelar').addEventListener('click', () => {
+document.getElementById('btnCancelar').addEventListener('click', ()=>{
   $('config').classList.add('oculto');
   $('inicio').classList.remove('oculto');
 });
 
-/* ─── Arranque ───────────────────────────────────────────── */
-VIDEOS = cargarConfig();
-ajustar();
+document.getElementById('btnAyuda').addEventListener('click', ()=>{
+  $('ayuda').classList.toggle('visible');
+});
+
+document.getElementById('btnMute').addEventListener('click', (e)=>{
+  video.muted = !video.muted;
+  e.target.textContent = video.muted ? '🔇' : '🔊';
+});
+
+function construirPanelConfig(){
+  const p=$('configPanel'); p.innerHTML='';
+  for(let i=0;i<5;i++){
+    const lbl=document.createElement('label');
+    lbl.textContent='Video '+(i+1);
+    const inp=document.createElement('input');
+    inp.id='url'+i; inp.type='url';
+    inp.placeholder='video'+(i+1)+'.mp4';
+    inp.value=VIDEOS[i]||'';
+    lbl.appendChild(inp);
+    p.appendChild(lbl);
+  }
+}
+
+ajustarCanvas();
+setEstado('Listo para iniciar');
 </script>
-
 </body>
 </html>
