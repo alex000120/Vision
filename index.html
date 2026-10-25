@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#05070d">
+<title>IA Holográfica · Detector de Manos</title>
+<style>
+  :root{ --verde:#38ffb0; --cian:#00d1ff; --fondo:#05070d; }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ height:100%; margin:0; background:var(--fondo); color:#e8f6ff;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; overflow:hidden; }
+
+  #stage{ position:fixed; inset:0; overflow:hidden; }
+  /* El video va espejado; el canvas NO, y sus coordenadas se espejan en el código */
+  #cam{ position:absolute; inset:0; width:100%; height:100%;
+        object-fit:contain; transform:scaleX(-1); background:#000; }
+  #overlay{ position:absolute; inset:0; width:100%; height:100%; }
+
+  #hud{ position:absolute; top:0; left:0; right:0; padding:10px;
+        display:flex; gap:8px; flex-wrap:wrap; align-items:center;
+        pointer-events:none; font-size:13px; }
+  .chip{ background:rgba(6,14,24,.72); border:1px solid rgba(56,255,176,.35);
+         border-radius:999px; padding:5px 11px; backdrop-filter:blur(6px); }
+  .chip b{ color:var(--verde); }
+
+  #lista{ position:absolute; left:10px; bottom:70px; display:flex;
+          flex-direction:column; gap:6px; font-size:13px; pointer-events:none; }
+  #lista div{ background:rgba(6,14,24,.72); border-radius:10px;
+              padding:6px 10px; border-left:3px solid var(--verde); }
+  #lista div.c1{ border-left-color:var(--cian); }
+
+  /* Ventanita para superponer el video del proyecto */
+  #pip{ position:absolute; right:10px; bottom:10px; width:34%; max-width:220px;
+        aspect-ratio:16/9; border-radius:12px; overflow:hidden;
+        border:1.5px solid rgba(56,255,176,.5); background:#0a1018;
+        display:flex; align-items:center; justify-content:center; }
+  #pip video{ width:100%; height:100%; object-fit:cover; display:none; }
+  #pip span{ font-size:11px; text-align:center; padding:6px; color:#8fb4c9; }
+
+  /* Pantalla de inicio */
+  #inicio{ position:absolute; inset:0; background:rgba(3,6,12,.94);
+           display:flex; flex-direction:column; align-items:center;
+           justify-content:center; gap:16px; padding:24px; text-align:center; z-index:10; }
+  #inicio h1{ font-size:19px; margin:0; font-weight:600; }
+  #inicio p{ margin:0; font-size:13px; color:#8fb4c9; max-width:340px; line-height:1.5; }
+  #btn{ background:var(--verde); color:#04140d; border:0; border-radius:999px;
+        padding:14px 34px; font-size:16px; font-weight:700; }
+  #btn:disabled{ opacity:.5; }
+  .oculto{ display:none !important; }
+  #error{ color:#ff7b7b; font-size:13px; max-width:340px; line-height:1.5; }
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <video id="cam" playsinline muted autoplay></video>
+  <canvas id="overlay"></canvas>
+
+  <div id="hud">
+    <div class="chip"><b id="fps">0</b> fps</div>
+    <div class="chip"><b id="nManos">0</b>/2 manos</div>
+    <div class="chip" id="chipTotal">—</div>
+  </div>
+
+  <div id="lista"></div>
+
+  <label id="pip">
+    <input type="file" id="fileVideo" accept="video/*" hidden>
+    <video id="pipVideo" playsinline loop muted></video>
+    <span id="pipHint">＋ Toca para<br>poner tu video</span>
+  </label>
+
+  <div id="inicio">
+    <h1>🤖 IA Holográfica</h1>
+    <p>Detector de manos en tiempo real. Permite la cámara y muestra tus manos frente al lente.</p>
+    <button id="btn">Iniciar cámara</button>
+    <div id="error"></div>
+  </div>
+</div>
+
+<!-- MediaPipe Hands (versión fija para que no se rompa) -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/hands.js" crossorigin="anonymous"></script>
+
+<script>
+/* ============================================================
+   CONFIGURACIÓN
+   ============================================================ */
+const INVERTIR_ETIQUETA = true; // Si "Derecha/Izquierda" sale al revés, cambia a false
+const MAX_MANOS = 2;
+
+const CONEXIONES = [
+  [0,1],[1,2],[2,3],[3,4],        // pulgar
+  [0,5],[5,6],[6,7],[7,8],        // índice
+  [5,9],[9,10],[10,11],[11,12],   // medio
+  [9,13],[13,14],[14,15],[15,16], // anular
+  [13,17],[17,18],[18,19],[19,20],// meñique
+  [0,17]                          // palma
+];
+const COLORES = ['#38ffb0', '#00d1ff'];
+
+/* ============================================================
+   REFERENCIAS
+   ============================================================ */
+const $ = id => document.getElementById(id);
+const stage   = $('stage');
+const video   = $('cam');
+const canvas  = $('overlay');
+const ctx     = canvas.getContext('2d');
+const btn     = $('btn');
+const inicio  = $('inicio');
+const errBox  = $('error');
+
+let cw = 0, ch = 0;          // tamaño real del canvas (px CSS)
+let corriendo = false;
+let frames = 0, fps = 0, tFps = performance.now();
+
+/* ============================================================
+   CANVAS
+   ============================================================ */
+function ajustar() {
+  const r = stage.getBoundingClientRect();
+  cw = canvas.width  = Math.round(r.width);
+  ch = canvas.height = Math.round(r.height);
+}
+window.addEventListener('resize', ajustar);
+window.addEventListener('orientationchange', () => setTimeout(ajustar, 350));
+
+/* Convierte coordenadas normalizadas de MediaPipe (0-1) a píxeles del canvas,
+   respetando el "object-fit: contain" del video y aplicando el espejo. */
+function proy(lm) {
+  const vw = video.videoWidth  || 1;
+  const vh = video.videoHeight || 1;
+  const s  = Math.min(cw / vw, ch / vh);
+  const dw = vw * s, dh = vh * s;
+  const ox = (cw - dw) / 2, oy = (ch - dh) / 2;
+  return {
+    x: cw - (ox + lm.x * dw),   // espejo horizontal
+    y: oy + lm.y * dh
+  };
+}
+
+/* ============================================================
+   CONTEO DE DEDOS (heurística)
+   ============================================================ */
+function contarDedos(lm, esDerecha) {
+  let n = 0;
+  // Índice, medio, anular y meñique: la punta queda por encima del nudillo
+  const pares = [[8,6],[12,10],[16,14],[20,18]];
+  for (const [punta, nudillo] of pares) {
+    if (lm[punta].y < lm[nudillo].y - 0.03) n++;
+  }
+  // Pulgar: comparación horizontal
+  const dx = lm[4].x - lm[3].x;
+  if (esDerecha ? dx < -0.015 : dx > 0.015) n++;
+  return n;
+}
+
+function nombreGesto(n) {
+  if (n === 0) return 'Puño';
+  if (n === 5) return 'Mano abierta';
+  if (n === 1) return 'Señalando';
+  if (n === 2) return 'Victoria';
+  return n + ' dedos';
+}
+
+/* ============================================================
+   DIBUJO
+   ============================================================ */
+function rrect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y,     x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x,     y + h, r);
+  ctx.arcTo(x,     y + h, x,     y,     r);
+  ctx.arcTo(x,     y,     x + w, y,     r);
+  ctx.closePath();
+}
+
+function dibujarMano(lm, idx, lado, dedos) {
+  const color   = COLORES[idx % COLORES.length];
+  const pts     = lm.map(proy);
+  const grosor  = Math.max(2, Math.round(cw / 220));
+  const radio   = Math.max(2.5, grosor * 1.5);
+
+  // Huesos
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = color;
+  ctx.lineWidth = grosor;
+  ctx.globalAlpha = 0.9;
+  ctx.beginPath();
+  for (const [a, b] of CONEXIONES) {
+    ctx.moveTo(pts[a].x, pts[a].y);
+    ctx.lineTo(pts[b].x, pts[b].y);
+  }
+  ctx.stroke();
+
+  // Articulaciones
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = color;
+  for (let i = 0; i < pts.length; i++) {
+    ctx.beginPath();
+    ctx.arc(pts[i].x, pts[i].y, i === 0 ? radio * 1.5 : radio, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Etiqueta
+  let minY = Infinity, sx = 0;
+  for (const p of pts) { if (p.y < minY) { minY = p.y; sx = p.x; } }
+  const texto = `Mano ${idx + 1} · ${lado} · ${nombreGesto(dedos)}`;
+  etiqueta(texto, sx, minY, color);
+}
+
+function etiqueta(texto, x, y, color) {
+  const fs  = Math.max(11, Math.round(cw / 40));
+  const pad = Math.round(fs * 0.55);
+  ctx.font = `600 ${fs}px system-ui, -apple-system, sans-serif`;
+  const w = ctx.measureText(texto).width + pad * 2;
+  const h = fs + pad * 2;
+
+  let bx = Math.max(4, Math.min(cw - w - 4, x - w / 2));
+  let by = y - h - 10;
+  if (by < 4) by = y + 14;
+
+  ctx.fillStyle = 'rgba(4,10,18,.75)';
+  rrect(bx, by, w, h, 8); ctx.fill();
+  ctx.strokeStyle = color; ctx.lineWidth = 1.5;
+  rrect(bx, by, w, h, 8); ctx.stroke();
+
+  ctx.fillStyle = color;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(texto, bx + pad, by + h / 2);
+}
+
+/* ============================================================
+   MEDIAPIPE
+   ============================================================ */
+const hands = new Hands({
+  locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${f}`
+});
+
+hands.setOptions({
+  maxNumHands: MAX_MANOS,
+  modelComplexity: 0,          // 0 = lite, el más rápido para el Moto E40
+  minDetectionConfidence: 0.6,
+  minTrackingConfidence: 0.5
+});
+
+hands.onResults(onResults);
+
+function onResults(res) {
+  // FPS
+  frames++;
+  const ahora = performance.now();
+  if (ahora - tFps >= 1000) {
+    fps = Math.round(frames * 1000 / (ahora - tFps));
+    frames = 0; tFps = ahora;
+    $('fps').textContent = fps;
+  }
+
+  ctx.clearRect(0, 0, cw, ch);
+
+  const manos     = res.multiHandLandmarks || [];
+  const etiquetas = res.multiHandedness    || [];
+  const lista     = $('lista');
+  lista.innerHTML = '';
+
+  let totalDedos = 0;
+
+  for (let i = 0; i < manos.length; i++) {
+    let et = etiquetas[i] ? etiquetas[i].label : 'Desconocida';
+    if (INVERTIR_ETIQUETA) et = (et === 'Right') ? 'Left' : 'Right';
+
+    const esDerecha = (et === 'Right');
+    const lado      = esDerecha ? 'Derecha' : 'Izquierda';
+    const dedos     = contarDedos(manos[i], esDerecha);
+
+    totalDedos += dedos;
+    dibujarMano(manos[i], i, lado, dedos);
+
+    const fila = document.createElement('div');
+    if (i === 1) fila.className = 'c1';
+    fila.textContent = `Mano ${i + 1} (${lado}): ${dedos} dedo${dedos === 1 ? '' : 's'} · ${nombreGesto(dedos)}`;
+    lista.appendChild(fila);
+  }
+
+  $('nManos').textContent    = manos.length;
+  $('chipTotal').textContent = manos.length ? `Total: ${totalDedos} dedos` : 'Sin manos';
+}
+
+/* ============================================================
+   BUCLE PRINCIPAL
+   ============================================================ */
+async function bucle() {
+  if (!corriendo) return;
+  if (video.readyState >= 2) {
+    try { await hands.send({ image: video }); }
+    catch (e) { /* frame perdido, seguimos */ }
+  }
+  if (corriendo) requestAnimationFrame(bucle);
+}
+
+/* ============================================================
+   ARRANQUE
+   ============================================================ */
+btn.addEventListener('click', async () => {
+  errBox.textContent = '';
+  btn.disabled = true;
+  btn.textContent = 'Iniciando…';
+
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    errBox.textContent = 'Este navegador no soporta cámara. Necesitas abrir la página con HTTPS o en localhost.';
+    btn.disabled = false; btn.textContent = 'Reintentar';
+    return;
+  }
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: 'user',
+        width:  { ideal: 480 },
+        height: { ideal: 360 },
+        frameRate: { ideal: 24, max: 30 }
+      },
+      audio: false
+    });
+
+    video.srcObject = stream;
+    await video.play();
+
+    ajustar();
+    try { await hands.initialize(); } catch (e) {}
+
+    inicio.classList.add('oculto');
+    corriendo = true;
+    bucle();
+
+  } catch (e) {
+    console.error(e);
+    errBox.textContent = 'No se pudo abrir la cámara: ' + (e.message || e.name) +
+      '. Recuerda que debe abrirse con HTTPS o en localhost.';
+    btn.disabled = false;
+    btn.textContent = 'Reintentar';
+  }
+});
+
+/* ============================================================
+   VENTANITA DE VIDEO (superposición del proyecto)
+   ============================================================ */
+const fileVideo = $('fileVideo');
+const pipVideo  = $('pipVideo');
+const pipHint   = $('pipHint');
+
+fileVideo.addEventListener('change', () => {
+  const f = fileVideo.files && fileVideo.files[0];
+  if (!f) return;
+  pipVideo.src = URL.createObjectURL(f);
+  pipVideo.style.display = 'block';
+  pipHint.style.display = 'none';
+  pipVideo.play().catch(() => {});
+});
+
+/* ============================================================
+   INICIO
+   ============================================================ */
+ajustar();
+</script>
+</body>
+</html>
