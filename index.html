@@ -3,219 +3,373 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#05070d">
-<title>IA Holográfica · Control Total por Señas</title>
+<title>Control de Videos por Gestos</title>
 <style>
   :root{ --verde:#38ffb0; --cian:#00d1ff; --fondo:#05070d; }
   *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   html,body{ height:100%; margin:0; background:var(--fondo); color:#e8f6ff;
     font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; overflow:hidden; }
 
-  #stage{ position:fixed; inset:0; overflow:hidden; }
-  #cam{ position:absolute; inset:0; width:100%; height:100%;
-        object-fit:contain; transform:scaleX(-1); background:#000; }
+  #app{ position:fixed; inset:0; display:flex; flex-direction:column; }
+
+  /* ─── Reproductor de video (arriba) ─── */
+  #reproductor{ flex:0 0 45%; background:#000; position:relative; overflow:hidden; }
+  #reproductor video{ width:100%; height:100%; object-fit:contain; display:block; }
+  #sinVideo{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    color:#5a8ba8; font-size:14px; text-align:center; padding:20px;
+    background:#000;
+  }
+
+  /* ─── Zona de cámara (abajo) ─── */
+  #camZone{ flex:1; position:relative; overflow:hidden; background:#000; }
+  #cam{
+    position:absolute; inset:0; width:100%; height:100%;
+    object-fit:cover; transform:scaleX(-1);
+  }
   #overlay{ position:absolute; inset:0; width:100%; height:100%; }
 
-  #hud{ position:absolute; top:0; left:0; right:0; padding:10px;
-        display:flex; gap:8px; flex-wrap:wrap; align-items:center;
-        pointer-events:none; font-size:13px; z-index:5; }
-  .chip{ background:rgba(6,14,24,.72); border:1px solid rgba(56,255,176,.35);
-         border-radius:999px; padding:5px 11px; backdrop-filter:blur(6px); }
+  /* ─── HUD ─── */
+  #hud{
+    position:absolute; top:8px; left:8px; right:8px;
+    display:flex; gap:6px; flex-wrap:wrap;
+    pointer-events:none; font-size:12px; z-index:5;
+  }
+  .chip{
+    background:rgba(6,14,24,.8); border:1px solid rgba(56,255,176,.35);
+    border-radius:999px; padding:4px 10px; backdrop-filter:blur(6px);
+  }
   .chip b{ color:var(--verde); }
 
-  #lista{ position:absolute; left:10px; bottom:80px; display:flex;
-          flex-direction:column; gap:6px; font-size:13px; pointer-events:none; z-index:5; }
-  #lista div{ background:rgba(6,14,24,.72); border-radius:10px;
-              padding:6px 10px; border-left:3px solid var(--verde); }
-  #lista div.c1{ border-left-color:var(--cian); }
+  #ayuda{
+    position:absolute; bottom:8px; left:8px;
+    background:rgba(6,14,24,.85); border-radius:10px;
+    padding:8px 12px; font-size:11px; line-height:1.6;
+    color:#8fb4c9; z-index:4; pointer-events:none;
+  }
+  #ayuda b{ color:var(--verde); }
 
-  /* Ventanita del video flotante */
-  #pip{ position:absolute; right:10px; bottom:10px; width:45%; max-width:250px;
-        aspect-ratio:16/9; border-radius:12px; overflow:hidden;
-        border:1.5px solid rgba(56,255,176,.5); background:#0a1018;
-        display:flex; align-items:center; justify-content:center; z-index:5; }
-  #pip video{ width:100%; height:100%; object-fit:cover; }
-
-  /* Pantalla de inicio */
-  #inicio{ position:absolute; inset:0; background:rgba(3,6,12,.94);
-           display:flex; flex-direction:column; align-items:center;
-           justify-content:center; gap:16px; padding:24px; text-align:center; z-index:10; }
-  #inicio h1{ font-size:19px; margin:0; font-weight:600; }
-  #inicio p{ margin:0; font-size:13px; color:#8fb4c9; max-width:340px; line-height:1.5; }
-  #btn{ background:var(--verde); color:#04140d; border:0; border-radius:999px;
-        padding:14px 34px; font-size:16px; font-weight:700; }
-  #btn:disabled{ opacity:.5; }
+  /* ─── Pantallas superpuestas ─── */
+  .pantalla{
+    position:absolute; inset:0; background:rgba(3,6,12,.96);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:14px; padding:24px; text-align:center; z-index:20;
+  }
+  .pantalla h1{ margin:0; font-size:19px; font-weight:600; }
+  .pantalla p{ margin:0; color:#8fb4c9; font-size:13px; max-width:340px; line-height:1.5; }
+  .pantalla button{
+    background:var(--verde); color:#04140d; border:0;
+    border-radius:999px; padding:12px 28px; font-size:15px; font-weight:700;
+  }
+  .pantalla button.sec{
+    background:transparent; color:var(--verde); border:1.5px solid var(--verde);
+  }
   .oculto{ display:none !important; }
-  #error{ color:#ff7b7b; font-size:13px; max-width:340px; line-height:1.5; }
+
+  #configPanel{
+    width:100%; max-width:420px; display:flex; flex-direction:column;
+    gap:10px; max-height:70vh; overflow-y:auto; padding:4px;
+  }
+  #configPanel label{
+    display:flex; flex-direction:column; gap:4px;
+    font-size:12px; color:#8fb4c9; text-align:left;
+  }
+  #configPanel input{
+    background:#0a1420; border:1px solid #1e344a; color:#e8f6ff;
+    padding:9px 11px; border-radius:8px; font-size:13px;
+  }
+  #error{ color:#ff7b7b; font-size:12px; max-width:340px; line-height:1.5; }
 </style>
 </head>
 <body>
 
-<div id="stage">
-  <video id="cam" playsinline muted autoplay></video>
-  <canvas id="overlay"></canvas>
+<div id="app">
 
-  <div id="hud">
-    <div class="chip">Video: <b id="lblVideoNum">1</b>/5</div>
-    <div class="chip" id="estadoAccion">Muestra 1 dedo para pasar al siguiente</div>
+  <!-- VIDEO PLAYER -->
+  <div id="reproductor">
+    <video id="video" playsinline loop></video>
+    <div id="sinVideo">Presiona un gesto para reproducir un video</div>
   </div>
 
-  <div id="lista"></div>
+  <!-- CÁMARA + DETECCIÓN -->
+  <div id="camZone">
+    <video id="cam" playsinline muted autoplay></video>
+    <canvas id="overlay"></canvas>
 
-  <!-- Reproductor de video flotante -->
-  <div id="pip">
-    <video id="pipVideo" playsinline></video>
+    <div id="hud">
+      <div class="chip">FPS <b id="fps">0</b></div>
+      <div class="chip">Gesto <b id="chipGesto">—</b></div>
+      <div class="chip">Video <b id="chipVideo">—</b>/5</div>
+    </div>
+
+    <div id="ayuda">
+      <div><b>1-5 dedos</b> → Video 1-5</div>
+      <div><b>Puño</b> → Play/Pausa</div>
+      <div><b>👍 Pulgar arriba</b> → Siguiente</div>
+    </div>
   </div>
 
-  <div id="inicio">
-    <h1>🤖 IA Holográfica por Gestos</h1>
-    <p>Controla tus 5 videos de forma totalmente gestual frente a la cámara de tu celular.</p>
-    <button id="btn">Iniciar sistema</button>
+  <!-- PANTALLA DE INICIO -->
+  <div id="inicio" class="pantalla">
+    <h1>🤖 Control por Gestos</h1>
+    <p>Detecta tus manos y controla los 5 videos con señas. Presiona Iniciar y permite la cámara.</p>
+    <button id="btnIniciar">Iniciar cámara</button>
+    <button id="btnConfig" class="sec">Configurar los 5 videos</button>
     <div id="error"></div>
   </div>
+
+  <!-- CONFIGURACIÓN -->
+  <div id="config" class="pantalla oculto">
+    <h1>⚙️ URLs de los videos</h1>
+    <p>Pega el enlace directo (.mp4, .webm). YouTube/Vimeo NO funcionan aquí, solo URLs directas de video.</p>
+    <div id="configPanel"></div>
+    <button id="btnGuardar">Guardar y volver</button>
+    <button id="btnCancelar" class="sec">Cancelar</button>
+  </div>
+
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/hands.js" crossorigin="anonymous"></script>
 
 <script>
-/* ============================================================
-   TUS 5 ESPACIOS DE VIDEOS (PEGA TUS ENLACES EXTERNOS AQUÍ)
-   Ejemplo: "https://tu-sitio.com/video1.mp4" o enlaces directos
-   ============================================================ */
-const LIKES_VIDEOS = [
-  "https://youtu.be/3Ax-vrlWeYY?si=dXvYsT43qeq0F_Ge", // ESPACIO VIDEO 1
-  "https://youtu.be/I23tOKBo3fE?si=sWL0701T-sgpLKf3", // ESPACIO VIDEO 2
-  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",     // ESPACIO VIDEO 3
-  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4", // ESPACIO VIDEO 4
-  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4"  // ESPACIO VIDEO 5
+/* ================================================================
+   ⬇️⬇️⬇️  AQUÍ VAN LOS 5 VIDEOS  ⬇️⬇️⬇️
+   Pega tus enlaces, uno por posición. Deben ser URLs directas
+   a un archivo .mp4 / .webm / .ogg (NO YouTube, NO Drive "share").
+   ================================================================ */
+const VIDEOS_DEFAULT = [
+  'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+  'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
+  'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+  'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
+  'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4'
 ];
+/* ================================================================ */
 
-let videoActualIdx = 0;
-const pipVideo = $('pipVideo');
-
-function cargarVideo(idx) {
-  videoActualIdx = idx;
-  pipVideo.src = LIKES_VIDEOS[idx];
-  pipVideo.load();
-  pipVideo.play().catch(()=>{});
-  $('lblVideoNum').textContent = (idx + 1);
-}
-
-/* ============================================================
-   CONFIGURACIÓN DE VISIÓN ARTIFICIAL
-   ============================================================ */
-const INVERTIR_ETIQUETA = true;
-const MAX_MANOS = 1; // 1 mano para simplificar y mandar comandos precisos
-const CONEXIONES = [
-  [0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],
-  [5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],
-  [13,17],[17,18],[18,19],[19,20],[0,17]
-];
-const COLORES = ['#38ffb0'];
+const MAX_MANOS = 2;
+const INVERTIR_ETIQUETA = true;   // si "Derecha/Izquierda" sale al revés, cambia a false
+const COOLDOWN = 900;             // ms mínimos entre acciones
 
 const $ = id => document.getElementById(id);
-const stage = $('stage');
-const video = $('cam');
+const cam = $('cam');
+const video = $('video');
 const canvas = $('overlay');
 const ctx = canvas.getContext('2d');
-const btn = $('btn');
-const inicio = $('inicio');
-const errBox = $('error');
 
-let cw = 0, ch = 0;
+let VIDEOS = [];
+let indiceActual = 0;
 let corriendo = false;
-let cooldownGesto = 0; // Evita que cambie de video locamente por segundo
+let frames = 0, fps = 0, tFps = performance.now();
+let cw = 0, ch = 0;
 
-function ajustar() {
-  const r = stage.getBoundingClientRect();
-  cw = canvas.width = Math.round(r.width);
+let ultimaAccion = 0;
+let gestoAnterior = null;
+let ultimoTipo = null;
+let contadorEstable = 0;
+
+/* ─── Config ─────────────────────────────────────────────── */
+function cargarConfig(){
+  try{
+    const s = localStorage.getItem('videos_ia_gestos');
+    if(s){
+      const a = JSON.parse(s);
+      if(Array.isArray(a) && a.length === 5) return a;
+    }
+  }catch(e){}
+  return VIDEOS_DEFAULT.slice();
+}
+
+function construirPanelConfig(){
+  const p = $('configPanel'); p.innerHTML = '';
+  for(let i=0; i<5; i++){
+    const lbl = document.createElement('label');
+    lbl.textContent = 'Video ' + (i+1);
+    const inp = document.createElement('input');
+    inp.id = 'url'+i; inp.type = 'url';
+    inp.placeholder = 'https://ejemplo.com/video.mp4';
+    inp.value = VIDEOS[i] || '';
+    lbl.appendChild(inp);
+    p.appendChild(lbl);
+  }
+}
+
+/* ─── Canvas ─────────────────────────────────────────────── */
+function ajustar(){
+  const r = canvas.getBoundingClientRect();
+  cw = canvas.width  = Math.round(r.width);
   ch = canvas.height = Math.round(r.height);
 }
 window.addEventListener('resize', ajustar);
+window.addEventListener('orientationchange', () => setTimeout(ajustar, 350));
 
-function proy(lm) {
-  const vw = video.videoWidth || 1;
-  const vh = video.videoHeight || 1;
-  const s = Math.min(cw / vw, ch / vh);
+function proy(lm){
+  const vw = cam.videoWidth || 1, vh = cam.videoHeight || 1;
+  const s  = Math.max(cw / vw, ch / vh);
   const dw = vw * s, dh = vh * s;
-  const ox = (cw - dw) / 2, oy = (ch - dh) / 2;
+  const ox = (cw - dw)/2, oy = (ch - dh)/2;
   return { x: cw - (ox + lm.x * dw), y: oy + lm.y * dh };
 }
 
-function contarDedos(lm, esDerecha) {
-  let n = 0;
-  const pares = [[8,6],[12,10],[16,14],[20,18]];
-  for (const [punta, nudillo] of pares) {
-    if (lm[punta].y < lm[nudillo].y - 0.03) n++;
-  }
+/* ─── Detección de gestos ────────────────────────────────── */
+function analizarMano(lm, esDerecha){
+  const indiceUp  = lm[8].y  < lm[6].y  - 0.03;
+  const medioUp   = lm[12].y < lm[10].y - 0.03;
+  const anularUp  = lm[16].y < lm[14].y - 0.03;
+  const meniqueUp = lm[20].y < lm[18].y - 0.03;
+
+  // Pulgar lateral (para conteo normal)
   const dx = lm[4].x - lm[3].x;
-  if (esDerecha ? dx < -0.015 : dx > 0.015) n++;
-  return n;
+  const pulgarLateral = esDerecha ? dx < -0.015 : dx > 0.015;
+
+  // Pulgar arriba (para gesto "👍")
+  const pulgarArriba =
+    lm[4].y < lm[3].y - 0.01 &&
+    lm[3].y < lm[2].y - 0.01;
+
+  const esPulgarArriba = pulgarArriba &&
+    !indiceUp && !medioUp && !anularUp && !meniqueUp;
+
+  const pulgarExtendido = pulgarLateral || pulgarArriba;
+  const total = (indiceUp?1:0)+(medioUp?1:0)+(anularUp?1:0)+(meniqueUp?1:0)+(pulgarExtendido?1:0);
+
+  let tipo = 'ninguno';
+  if(esPulgarArriba) tipo = 'siguiente';
+  else if(total === 0) tipo = 'playpause';
+  else if(total >= 1 && total <= 5) tipo = 'video';
+
+  return { tipo, dedos: total };
 }
 
-/* ============================================================
-   CONTROL TOTAL POR SEÑAS
-   ============================================================ */
-function procesarControlPorGestos(totalDedos) {
-  if (cooldownGesto > 0) {
-    cooldownGesto--;
+function nombreGesto(g){
+  if(g.tipo === 'siguiente') return '👍 Siguiente';
+  if(g.tipo === 'playpause') return 'Puño · Play/Pausa';
+  if(g.tipo === 'video') return g.dedos + ' dedo' + (g.dedos===1?'':'s') + ' → Video ' + g.dedos;
+  return '—';
+}
+
+/* ─── Acciones ───────────────────────────────────────────── */
+function cargarVideo(idx){
+  if(idx < 0 || idx >= VIDEOS.length) return;
+  const url = VIDEOS[idx];
+  indiceActual = idx;
+  $('chipVideo').textContent = idx + 1;
+
+  if(!url){
+    $('sinVideo').textContent = 'Video ' + (idx+1) + ' no configurado (abre ⚙️ Configurar)';
+    $('sinVideo').classList.remove('oculto');
+    video.style.display = 'none';
+    video.removeAttribute('src');
     return;
   }
 
-  // 1 DEDO (Señalando): Pasa al siguiente video de forma circular (1 -> 2 -> 3 -> 4 -> 5 -> 1)
-  if (totalDedos === 1) {
-    videoActualIdx = (videoActualIdx + 1) % LIKES_VIDEOS.length;
-    cargarVideo(videoActualIdx);
-    $('estadoAccion').textContent = `⏭️ Pasando al Video ${videoActualIdx + 1}`;
-    cooldownGesto = 45; // Pausa de seguridad de aprox 1.5 segundos para que no salte de video solo
-  }
-  // PUÑO (0 dedos): Pausa
-  else if (totalDedos === 0) {
-    if (!pipVideo.paused) {
-      pipVideo.pause();
-      $('estadoAccion').textContent = "🛑 Video Pausado (Puño)";
-      cooldownGesto = 30;
-    }
-  }
-  // MANO ABIERTA (5 dedos): Reproduce
-  else if (totalDedos >= 5) {
-    if (pipVideo.paused) {
-      pipVideo.play();
-      $('estadoAccion').textContent = "▶️ Reproduciendo (Mano Abierta)";
-      cooldownGesto = 30;
-    }
-  }
+  $('sinVideo').classList.add('oculto');
+  video.style.display = 'block';
+  video.src = url;
+  video.load();
+  video.muted = false;
+  video.play().catch(() => {
+    // Fallback si el navegador bloquea autoplay con sonido
+    video.muted = true;
+    video.play().catch(e => console.warn('No se pudo reproducir:', e));
+  });
 }
 
-/* ============================================================
-   DIBUJO EN CANVAS
-   ============================================================ */
-function dibujarMano(lm, lado, dedos) {
-  const pts = lm.map(proy);
-  const grosor = Math.max(2, Math.round(cw / 220));
+function togglePlay(){
+  if(!video.src) return;
+  if(video.paused) video.play().catch(e=>console.warn(e));
+  else video.pause();
+}
 
-  ctx.lineCap = 'round';
-  ctx.strokeStyle = COLORES[0];
-  ctx.lineWidth = grosor;
+function siguienteVideo(){
+  cargarVideo((indiceActual + 1) % VIDEOS.length);
+}
+
+function procesarGesto(gesto){
+  if(!gesto || gesto.tipo === 'ninguno') return;
+  const ahora = Date.now();
+  const key = gesto.tipo + '_' + gesto.dedos;
+
+  if(key === gestoAnterior) return;                // ya se ejecutó este mismo gesto
+  if((ahora - ultimaAccion) < COOLDOWN) return;    // cooldown global
+
+  if(gesto.tipo === 'video')          cargarVideo(gesto.dedos - 1);
+  else if(gesto.tipo === 'siguiente')  siguienteVideo();
+  else if(gesto.tipo === 'playpause')  togglePlay();
+
+  ultimaAccion = ahora;
+  gestoAnterior = key;
+}
+
+/* ─── Dibujo ─────────────────────────────────────────────── */
+const CONEXIONES = [
+  [0,1],[1,2],[2,3],[3,4],
+  [0,5],[5,6],[6,7],[7,8],
+  [5,9],[9,10],[10,11],[11,12],
+  [9,13],[13,14],[14,15],[15,16],
+  [13,17],[17,18],[18,19],[19,20],
+  [0,17]
+];
+const COLORES = ['#38ffb0', '#00d1ff'];
+
+function rrect(x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+
+function dibujarMano(lm, idx, lado, info){
+  const color  = COLORES[idx % COLORES.length];
+  const pts    = lm.map(proy);
+  const grosor = Math.max(2, Math.round(cw / 180));
+  const radio  = Math.max(2.5, grosor * 1.5);
+
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.strokeStyle = color; ctx.lineWidth = grosor;
   ctx.globalAlpha = 0.9;
   ctx.beginPath();
-  for (const [a, b] of CONEXIONES) {
+  for(const [a,b] of CONEXIONES){
     ctx.moveTo(pts[a].x, pts[a].y);
     ctx.lineTo(pts[b].x, pts[b].y);
   }
   ctx.stroke();
 
-  ctx.fillStyle = COLORES[0];
-  for (let i = 0; i < pts.length; i++) {
+  ctx.globalAlpha = 1; ctx.fillStyle = color;
+  for(let i=0; i<pts.length; i++){
     ctx.beginPath();
-    ctx.arc(pts[i].x, pts[i].y, 3, 0, Math.PI * 2);
+    ctx.arc(pts[i].x, pts[i].y, i===0 ? radio*1.5 : radio, 0, Math.PI*2);
     ctx.fill();
   }
+
+  let minY = Infinity, sx = 0;
+  for(const p of pts) if(p.y < minY){ minY = p.y; sx = p.x; }
+  etiqueta(`Mano ${idx+1} · ${lado} · ${nombreGesto(info)}`, sx, minY, color);
 }
 
-/* ============================================================
-   MEDIAPIPE HANDS
-   ============================================================ */
+function etiqueta(texto, x, y, color){
+  const fs  = Math.max(10, Math.round(cw / 45));
+  const pad = Math.round(fs * 0.5);
+  ctx.font = `600 ${fs}px system-ui, -apple-system, sans-serif`;
+  const w = ctx.measureText(texto).width + pad*2;
+  const h = fs + pad*2;
+  let bx = Math.max(4, Math.min(cw - w - 4, x - w/2));
+  let by = y - h - 8;
+  if(by < 4) by = y + 12;
+
+  ctx.fillStyle = 'rgba(4,10,18,.78)';
+  rrect(bx,by,w,h,7); ctx.fill();
+  ctx.strokeStyle = color; ctx.lineWidth = 1.5;
+  rrect(bx,by,w,h,7); ctx.stroke();
+
+  ctx.fillStyle = color;
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText(texto, bx + pad, by + h/2);
+}
+
+/* ─── MediaPipe ──────────────────────────────────────────── */
 const hands = new Hands({
   locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${f}`
 });
@@ -227,73 +381,129 @@ hands.setOptions({
   minTrackingConfidence: 0.5
 });
 
-hands.onResults(res => {
+hands.onResults(onResults);
+
+function onResults(res){
+  frames++;
+  const ahora = performance.now();
+  if(ahora - tFps >= 1000){
+    fps = Math.round(frames*1000/(ahora - tFps));
+    frames = 0; tFps = ahora;
+    $('fps').textContent = fps;
+  }
+
   ctx.clearRect(0, 0, cw, ch);
 
-  const manos = res.multiHandLandmarks || [];
-  const etiquetas = res.multiHandedness || [];
-  const lista = $('lista');
-  lista.innerHTML = '';
+  const manos     = res.multiHandLandmarks || [];
+  const etiquetas = res.multiHandedness    || [];
+  let gestoMostrado = null;
 
-  if (manos.length > 0) {
-    let et = etiquetas[0] ? etiquetas[0].label : 'Desconocida';
-    if (INVERTIR_ETIQUETA) et = (et === 'Right') ? 'Left' : 'Right';
-
+  for(let i=0; i<manos.length; i++){
+    let et = etiquetas[i] ? etiquetas[i].label : 'Desconocida';
+    if(INVERTIR_ETIQUETA) et = (et === 'Right') ? 'Left' : 'Right';
     const esDerecha = (et === 'Right');
-    const dedos = contarDedos(manos[0], esDerecha);
+    const lado = esDerecha ? 'Derecha' : 'Izquierda';
 
-    dibujarMano(manos[0], esDerecha ? 'Derecha' : 'Izquierda', dedos);
+    const info = analizarMano(manos[i], esDerecha);
+    dibujarMano(manos[i], i, lado, info);
 
-    const fila = document.createElement('div');
-    fila.textContent = `Gesto detectado: ${dedos} dedo(s)`;
-    lista.appendChild(fila);
+    // La primera mano detectada manda
+    if(i === 0 && info.tipo !== 'ninguno') gestoMostrado = info;
+  }
 
-    // Procesar la seña para controlar los videos
-    procesarControlPorGestos(dedos);
+  $('chipGesto').textContent = gestoMostrado ? nombreGesto(gestoMostrado) : '—';
+
+  if(gestoMostrado){
+    const key = gestoMostrado.tipo + '_' + gestoMostrado.dedos;
+    if(key === ultimoTipo) contadorEstable++;
+    else { contadorEstable = 1; ultimoTipo = key; }
+
+    // Requiere 3 frames seguidos con el mismo gesto para evitar falsos positivos
+    if(contadorEstable >= 3) procesarGesto(gestoMostrado);
   } else {
-    $('lista.innerHTML = ""');
+    ultimoTipo = null;
+    contadorEstable = 0;
+    gestoAnterior = null;
   }
-});
-
-async function bucle() {
-  if (!corriendo) return;
-  if (video.readyState >= 2) {
-    try { await hands.send({ image: video }); } catch (e) {}
-  }
-  if (corriendo) requestAnimationFrame(bucle);
 }
 
-btn.addEventListener('click', async () => {
-  errBox.textContent = '';
-  btn.disabled = true;
-  btn.textContent = 'Iniciando cámara...';
+/* ─── Bucle ──────────────────────────────────────────────── */
+async function bucle(){
+  if(!corriendo) return;
+  if(cam.readyState >= 2){
+    try { await hands.send({ image: cam }); } catch(e){}
+  }
+  if(corriendo) requestAnimationFrame(bucle);
+}
 
-  try {
+/* ─── UI ─────────────────────────────────────────────────── */
+$('btnIniciar').addEventListener('click', async () => {
+  $('error').textContent = '';
+  const btn = $('btnIniciar');
+  btn.disabled = true; btn.textContent = 'Iniciando…';
+
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    $('error').textContent = 'Este navegador no soporta cámara. Abre la página con HTTPS o en localhost.';
+    btn.disabled = false; btn.textContent = 'Iniciar cámara';
+    return;
+  }
+
+  try{
     const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'user', width: { ideal: 480 }, height: { ideal: 360 }, frameRate: { ideal: 24, max: 30 } },
+      video: {
+        facingMode: 'user',
+        width: { ideal: 480 },
+        height: { ideal: 360 },
+        frameRate: { ideal: 24, max: 30 }
+      },
       audio: false
     });
+    cam.srcObject = stream;
+    await cam.play();
 
-    video.srcObject = stream;
-    await video.play();
     ajustar();
-    
-    // Cargar el primer video de la lista de golpe
-    cargarVideo(0);
+    try { await hands.initialize(); } catch(e){}
 
-    try { await hands.initialize(); } catch (e) {}
-
-    inicio.classList.add('oculto');
+    $('inicio').classList.add('oculto');
     corriendo = true;
+
+    // Precarga el video 1 si hay URL
+    if(VIDEOS[0]) cargarVideo(0);
+
     bucle();
-  } catch (e) {
-    errBox.textContent = 'Error al abrir cámara: ' + (e.message || e.name);
-    btn.disabled = false;
-    btn.textContent = 'Reintentar';
+  } catch(e){
+    console.error(e);
+    $('error').textContent = 'No se pudo abrir la cámara: ' + (e.message || e.name) +
+      '. Debe abrirse con HTTPS o en localhost.';
+    btn.disabled = false; btn.textContent = 'Reintentar';
   }
 });
 
+$('btnConfig').addEventListener('click', () => {
+  construirPanelConfig();
+  $('inicio').classList.add('oculto');
+  $('config').classList.remove('oculto');
+});
+
+$('btnGuardar').addEventListener('click', () => {
+  const urls = [];
+  for(let i=0; i<5; i++) urls.push(($('url'+i).value || '').trim());
+  VIDEOS = urls;
+  localStorage.setItem('videos_ia_gestos', JSON.stringify(urls));
+  $('config').classList.add('oculto');
+  $('inicio').classList.remove('oculto');
+  if(VIDEOS[indiceActual]) cargarVideo(indiceActual);
+});
+
+$('btnCancelar').addEventListener('click', () => {
+  $('config').classList.add('oculto');
+  $('inicio').classList.remove('oculto');
+});
+
+/* ─── Arranque ───────────────────────────────────────────── */
+VIDEOS = cargarConfig();
 ajustar();
 </script>
+
 </body>
 </html>
