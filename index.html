@@ -131,7 +131,8 @@
 
 <script>
 /* ==================== CONFIG ==================== */
-let VIDEOS = ['vid1.mp4','vid2.mp4','vid3.mp4','vid4.mp4','vid5.mp4'];
+let VIDEOS = ['./vid1.mp4', './vid2.mp4', './vid3.mp4', './vid4.mp4', './vid5.mp4'];
+ 
 try {
   const s = localStorage.getItem('ia_gestos_videos');
   if (s) { const a = JSON.parse(s); if (Array.isArray(a) && a.length===5) VIDEOS = a; }
