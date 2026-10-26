@@ -211,10 +211,9 @@
   }
   @keyframes pulseRing { 0% { transform: scale(1); opacity: .8; } 100% { transform: scale(1.22); opacity: 0; } }
 
-  /* Ajuste para el soporte de Imagen MJPEG de IP Webcam */
   #cam, #camImg, #overlay { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
   #cam, #camImg { object-fit: cover; transform: scaleX(-1); }
-  #camImg { display: none; } /* Oculto por defecto, se activa si hay URL externa */
+  #camImg { display: none; }
   #overlay { pointer-events: none; }
 
   #camPiP::after {
@@ -349,7 +348,6 @@
     <div style="margin-top:6px;color:#5a8ba8;font-size:10px;">Mantén 1.2s cada gesto</div>
   </div>
 
-  <!-- Agregamos la etiqueta IMG para el stream MJPEG de IP Webcam -->
   <div id="camPiP">
     <video id="cam" playsinline muted autoplay></video>
     <img id="camImg" crossorigin="anonymous" alt="Cámara IP">
@@ -700,6 +698,10 @@ async function iniciar(){
   const btn=$('btnIniciar');
   btn.disabled=true; btn.textContent='Iniciando...'; setError('');
 
+  // ✅ CORRECCIÓN: Restablecer vistas por si se reintenta
+  cam.style.display = 'block';
+  camImg.style.display = 'none';
+
   try{
     setEstado('1/4 · Cargando MediaPipe...');
     await cargarMediaPipe();
@@ -722,8 +724,20 @@ async function iniciar(){
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
         throw new Error('Tu navegador no soporta cámara. Necesitas HTTPS o localhost.');
       }
+      
+      // ✅ CORRECCIÓN: Detener tracks viejos si los hay
+      if (cam.srcObject) {
+        cam.srcObject.getTracks().forEach(t => t.stop());
+      }
+
+      // ✅ CORRECCIÓN: Quitamos facingMode para evitar fallos en PC o celus
       const stream = await navigator.mediaDevices.getUserMedia({
-        video:{ facingMode:'user', width:{ideal:480}, height:{ideal:360}, frameRate:{ideal:24, max:30} }, audio:false
+        video: { 
+          width: { ideal: 640 }, 
+          height: { ideal: 480 }, 
+          frameRate: { ideal: 24, max: 30 } 
+        }, 
+        audio: false
       });
       cam.srcObject = stream;
       await cam.play();
