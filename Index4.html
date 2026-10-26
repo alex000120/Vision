@@ -9,7 +9,7 @@
   :root {
     --verde: #38ffb0;
     --cian: #00d1ff;
-    --panel: rgba(6,14,24,.85);
+    --panel: rgba(6,14,24,.9);
     --pip-size: clamp(110px, 26vw, 240px);
     --pip-size-fs: clamp(80px, 14vw, 140px);
   }
@@ -162,7 +162,6 @@
   .chip {
     background: var(--panel); border: 1px solid rgba(56,255,176,.35);
     border-radius: 999px; padding: 4px 10px;
-    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
   }
   .chip b { color: var(--verde); font-weight: 700; }
 
@@ -173,7 +172,6 @@
     border: 1px solid rgba(56,255,176,.4); border-radius: 10px; padding: 6px 12px;
     font-size: 11px; z-index: 15; display: none;
     box-shadow: 0 0 24px rgba(56,255,176,.25);
-    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
   }
   #progreso.visible { display: block; }
   #progresoTexto { color: #e8f6ff; font-weight: 600; margin-bottom: 4px; }
@@ -211,10 +209,21 @@
   }
   @keyframes pulseRing { 0% { transform: scale(1); opacity: .8; } 100% { transform: scale(1.22); opacity: 0; } }
 
-  #cam, #camImg, #overlay { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-  #cam, #camImg { object-fit: cover; transform: scaleX(-1); }
+  /* ✅ FIX: Forzamos aceleración por hardware para evitar el bug de pantalla negra */
+  #cam, #camImg, #overlay { 
+    position: absolute; inset: 0; width: 100%; height: 100%; 
+    display: block; 
+    transform: translateZ(0); 
+  }
+  #cam, #camImg { 
+    object-fit: cover; 
+    -webkit-transform: translateZ(0) scaleX(-1); 
+    transform: translateZ(0) scaleX(-1); 
+    backface-visibility: hidden;
+    z-index: 1; 
+  }
   #camImg { display: none; }
-  #overlay { pointer-events: none; }
+  #overlay { pointer-events: none; z-index: 2; }
 
   #camPiP::after {
     content: ''; position: absolute; left: 0; right: 0; height: 2px;
@@ -231,7 +240,7 @@
     border-radius: 50%; background: var(--panel);
     border: 1px solid rgba(56,255,176,.5); color: var(--verde); font-size: 16px; z-index: 15;
     cursor: pointer; display: flex; align-items: center; justify-content: center;
-    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); box-shadow: 0 0 12px rgba(56,255,176,.2);
+    box-shadow: 0 0 12px rgba(56,255,176,.2);
   }
   .btn-flotante:active { transform: scale(.92); box-shadow: 0 0 20px rgba(56,255,176,.5); }
   #btnAyuda { right: 12px; top: 12px; font-size: 18px; font-weight: 700; }
@@ -242,7 +251,6 @@
     position: absolute; top: 60px; right: 12px; background: var(--panel);
     border: 1px solid rgba(56,255,176,.3); border-radius: 12px; padding: 10px 14px;
     font-size: 11px; line-height: 1.7; color: #8fb4c9; z-index: 14; display: none; max-width: 240px;
-    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
   }
   #ayuda.visible { display: block; }
   #ayuda b { color: var(--verde); }
@@ -252,7 +260,7 @@
   .pantalla {
     position: absolute; inset: 0; background: rgba(3,6,12,.96);
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 14px; padding: 24px; text-align: center; z-index: 20; backdrop-filter: blur(10px);
+    gap: 14px; padding: 24px; text-align: center; z-index: 20;
   }
   .pantalla.oculto { display: none; }
   .pantalla h1 { font-size: 20px; font-weight: 600; }
@@ -350,7 +358,7 @@
 
   <div id="camPiP">
     <video id="cam" playsinline muted autoplay></video>
-    <img id="camImg" crossorigin="anonymous" alt="Cámara IP">
+    <img id="camImg" alt="Cámara IP">
     <canvas id="overlay"></canvas>
   </div>
 
@@ -392,8 +400,7 @@ const COMANDOS = {
 };
 
 const CONFIG = {
-  framesRequeridos: 28, framesReset: 15, cooldownMs: 700,
-  fingerThreshold: 1.18, thumbThreshold: 1.35,
+  framesRequeridos: 24, framesReset: 15, cooldownMs: 700,
   mediapipeBase: 'https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240',
   camaraUrl: ''
 };
@@ -407,7 +414,8 @@ const estado = {
   gestoActual:null, framesEstables:0,
   esperandoNeutro:false, comandoEjecutado:null,
   framesSinManos:0, ultimaAccion:0, esFullscreen:false,
-  welcomeVisible:false, activeCam: null
+  welcomeVisible:false, activeCam: null,
+  smoothLandmarks: null
 };
 
 const $ = id => document.getElementById(id);
@@ -444,27 +452,49 @@ function proy(lm){
   const ox=(cw-dw)/2, oy=(ch-dh)/2;
   return { x: cw-(ox+lm.x*dw), y: oy+lm.y*dh };
 }
+
 function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y, (a.z||0)-(b.z||0)); }
 
+// ✅ MEJORA: Lógica de detección de dedos más precisa
 function analizarMano(lm){
   const w = lm[0];
-  const indice  = dist(lm[8], w)  > dist(lm[5], w)  * CONFIG.fingerThreshold;
-  const medio   = dist(lm[12], w) > dist(lm[9], w)  * CONFIG.fingerThreshold;
-  const anular  = dist(lm[16], w) > dist(lm[13], w) * CONFIG.fingerThreshold;
-  const menique = dist(lm[20], w) > dist(lm[17], w) * CONFIG.fingerThreshold;
-  const pulgar  = dist(lm[4], lm[5]) > dist(lm[2], lm[5]) * CONFIG.thumbThreshold;
-
-  const pulgarArriba = pulgar && !indice && !medio && !anular && !menique
-    && lm[4].y < lm[3].y - 0.015 && lm[3].y < lm[2].y - 0.015;
-  if (pulgarArriba) return { patron:'pulgar_arriba', dedos:1 };
-
-  const a=[];
-  if(anular)  a.push('anular');
-  if(indice)  a.push('indice');
-  if(medio)   a.push('medio');
-  if(menique) a.push('menique');
-  if(pulgar)  a.push('pulgar');
-  return { patron: a.length===0 ? 'nada' : a.join('_'), dedos:a.length };
+  
+  // Un dedo está extendido si su punta está más lejos de la muñeca que su nudillo
+  const dTip = (tip, pip) => dist(lm[tip], w) > dist(lm[pip], w) * 1.15;
+  
+  const indice = dTip(8, 6);
+  const medio = dTip(12, 10);
+  const anular = dTip(16, 14);
+  const menique = dTip(20, 18);
+  
+  // El pulgar requiere lógica especial: comparamos la distancia al meñique
+  const dPulgarMenique = dist(lm[4], lm[17]);
+  const pulgarLateral = dPulgarMenique > 0.12; 
+  
+  // Verificación extra por si está apuntando hacia arriba
+  const pulgarArriba = lm[4].y < lm[3].y - 0.015 && lm[3].y < lm[2].y - 0.015;
+  
+  const pulgar = (pulgarLateral || pulgarArriba);
+  
+  // Si el pulgar está arriba y el resto cerrado, es el comando "Siguiente"
+  if (pulgarArriba && !indice && !medio && !anular && !menique) {
+    return { patron: 'pulgar_arriba', dedos: 1 };
+  }
+  
+  const dedosExtendidos = [];
+  if (anular) dedosExtendidos.push('anular');
+  if (indice) dedosExtendidos.push('indice');
+  if (medio) dedosExtendidos.push('medio');
+  if (menique) dedosExtendidos.push('menique');
+  if (pulgar && !pulgarArriba) dedosExtendidos.push('pulgar');
+  
+  // Ordenamos para que coincida exactamente con las llaves de COMANDOS
+  dedosExtendidos.sort();
+  
+  return { 
+    patron: dedosExtendidos.length === 0 ? 'nada' : dedosExtendidos.join('_'), 
+    dedos: dedosExtendidos.length 
+  };
 }
 
 function procesarPatron(patron){
@@ -613,6 +643,33 @@ function etiqueta(texto,x,y,color){
   ctx.fillText(texto,bx+pad,by+h/2);
 }
 
+// ✅ MEJORA: Filtro de suavizado para evitar temblores
+function suavizarLandmarks(manosRaw) {
+  if (!manosRaw || manosRaw.length === 0) {
+    estado.smoothLandmarks = null;
+    return [];
+  }
+  
+  const alpha = 0.55; // Mayor = más reactivo, Menor = más suave
+  
+  if (!estado.smoothLandmarks || estado.smoothLandmarks.length !== manosRaw.length) {
+    estado.smoothLandmarks = manosRaw.map(m => m.map(p => ({...p})));
+    return estado.smoothLandmarks;
+  }
+
+  return manosRaw.map((mano, i) => mano.map((p, j) => {
+    const prev = estado.smoothLandmarks[i][j];
+    if (!prev) return {...p};
+    const newP = {
+      x: prev.x + alpha * (p.x - prev.x),
+      y: prev.y + alpha * (p.y - prev.y),
+      z: (prev.z||0) + alpha * ((p.z||0) - (prev.z||0))
+    };
+    estado.smoothLandmarks[i][j] = newP;
+    return newP;
+  }));
+}
+
 function onResults(res){
   framesFps++;
   const ahora=performance.now();
@@ -620,9 +677,13 @@ function onResults(res){
     fps=Math.round(framesFps*1000/(ahora-tFps));
     framesFps=0; tFps=ahora; $('fps').textContent=fps;
   }
+  
+  if (!cw || !ch) ajustarCanvas();
   ctx.clearRect(0,0,cw,ch);
 
-  const manos = res.multiHandLandmarks || [];
+  const manosRaw = res.multiHandLandmarks || [];
+  const manos = suavizarLandmarks(manosRaw);
+
   if (manos.length===0){
     estado.framesSinManos++;
     if (estado.framesSinManos>CONFIG.framesReset){
@@ -698,7 +759,6 @@ async function iniciar(){
   const btn=$('btnIniciar');
   btn.disabled=true; btn.textContent='Iniciando...'; setError('');
 
-  // ✅ CORRECCIÓN: Restablecer vistas por si se reintenta
   cam.style.display = 'block';
   camImg.style.display = 'none';
 
@@ -725,12 +785,10 @@ async function iniciar(){
         throw new Error('Tu navegador no soporta cámara. Necesitas HTTPS o localhost.');
       }
       
-      // ✅ CORRECCIÓN: Detener tracks viejos si los hay
       if (cam.srcObject) {
         cam.srcObject.getTracks().forEach(t => t.stop());
       }
 
-      // ✅ CORRECCIÓN: Quitamos facingMode para evitar fallos en PC o celus
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { 
           width: { ideal: 640 }, 
@@ -740,6 +798,12 @@ async function iniciar(){
         audio: false
       });
       cam.srcObject = stream;
+      
+      // ✅ FIX: Esperar a que el video esté realmente listo antes de mostrarlo
+      await new Promise((resolve) => {
+        if (cam.readyState >= 2) return resolve();
+        cam.onloadeddata = resolve;
+      });
       await cam.play();
       estado.activeCam = cam;
     }
@@ -758,7 +822,10 @@ async function iniciar(){
     setEstado('3/4 · Iniciando detector...');
     estado.hands = new Hands({ locateFile: f => CONFIG.mediapipeBase+'/'+f });
     estado.hands.setOptions({
-      maxNumHands:2, modelComplexity:0, minDetectionConfidence:0.6, minTrackingConfidence:0.5
+      maxNumHands: 2, 
+      modelComplexity: 1, // ✅ MEJORA: Precisión aumentada
+      minDetectionConfidence: 0.65, 
+      minTrackingConfidence: 0.6
     });
     estado.hands.onResults(onResults);
 
