@@ -9,7 +9,7 @@
   :root {
     --verde: #38ffb0;
     --cian: #00d1ff;
-    --panel: rgba(6,14,24,.9);
+    --panel: rgba(6,14,24,.85);
     --pip-size: clamp(110px, 26vw, 240px);
     --pip-size-fs: clamp(80px, 14vw, 140px);
   }
@@ -209,21 +209,20 @@
   }
   @keyframes pulseRing { 0% { transform: scale(1); opacity: .8; } 100% { transform: scale(1.22); opacity: 0; } }
 
-  /* ✅ FIX: Forzamos aceleración por hardware para evitar el bug de pantalla negra */
-  #cam, #camImg, #overlay { 
-    position: absolute; inset: 0; width: 100%; height: 100%; 
-    display: block; 
-    transform: translateZ(0); 
-  }
-  #cam, #camImg { 
-    object-fit: cover; 
-    -webkit-transform: translateZ(0) scaleX(-1); 
-    transform: translateZ(0) scaleX(-1); 
+  /* ✅ FIX: Capas separadas. Video en el fondo sin transformaciones */
+  #cam, #camImg {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: cover;
+    z-index: 1;
     backface-visibility: hidden;
-    z-index: 1; 
   }
   #camImg { display: none; }
-  #overlay { pointer-events: none; z-index: 2; }
+  
+  /* El canvas va arriba del video, pero sin fondo opaco */
+  #overlay {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    pointer-events: none; z-index: 2;
+  }
 
   #camPiP::after {
     content: ''; position: absolute; left: 0; right: 0; height: 2px;
@@ -400,7 +399,9 @@ const COMANDOS = {
 };
 
 const CONFIG = {
-  framesRequeridos: 24, framesReset: 15, cooldownMs: 700,
+  framesRequeridos: 15, // Más rápido de activar (0.5s) para mejor respuesta
+  framesReset: 15, 
+  cooldownMs: 800,
   mediapipeBase: 'https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240',
   camaraUrl: ''
 };
@@ -414,8 +415,7 @@ const estado = {
   gestoActual:null, framesEstables:0,
   esperandoNeutro:false, comandoEjecutado:null,
   framesSinManos:0, ultimaAccion:0, esFullscreen:false,
-  welcomeVisible:false, activeCam: null,
-  smoothLandmarks: null
+  welcomeVisible:false, activeCam: null, enviandoFrame: false
 };
 
 const $ = id => document.getElementById(id);
@@ -423,7 +423,8 @@ const cam = $('cam');
 const camImg = $('camImg');
 const video = $('video');
 const canvas = $('overlay');
-const ctx = canvas.getContext('2d');
+// FIX: alpha: true para que el video de fondo se vea a través del canvas
+const ctx = canvas.getContext('2d', { alpha: true });
 const camPiP = $('camPiP');
 
 let cw=0, ch=0, fps=0, framesFps=0, tFps=performance.now(), lastSend=0;
@@ -443,6 +444,7 @@ camPiP.addEventListener('transitionend', (e) => {
   if (e.propertyName === 'width') ajustarCanvas();
 });
 
+// FIX: Invertimos la X matemáticamente porque quitamos scaleX(-1) del CSS
 function proy(lm){
   const src = estado.activeCam || cam;
   const vw = src.videoWidth || src.naturalWidth || 640;
@@ -450,34 +452,29 @@ function proy(lm){
   const s=Math.max(cw/vw, ch/vh);
   const dw=vw*s, dh=vh*s;
   const ox=(cw-dw)/2, oy=(ch-dh)/2;
-  return { x: cw-(ox+lm.x*dw), y: oy+lm.y*dh };
+  return { x: cw - (ox + lm.x * dw), y: oy + lm.y * dh };
 }
 
 function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y, (a.z||0)-(b.z||0)); }
 
-// ✅ MEJORA: Lógica de detección de dedos más precisa
+// ✅ LÓGICA ROBUSTA: Detección basada en distancias Euclidianas (funciona incluso si giras la mano)
 function analizarMano(lm){
   const w = lm[0];
   
-  // Un dedo está extendido si su punta está más lejos de la muñeca que su nudillo
-  const dTip = (tip, pip) => dist(lm[tip], w) > dist(lm[pip], w) * 1.15;
+  // 1. Evaluar los 4 dedos largos
+  const indice = dist(lm[8], w) > dist(lm[5], w) * 1.1;
+  const medio = dist(lm[12], w) > dist(lm[9], w) * 1.1;
+  const anular = dist(lm[16], w) > dist(lm[13], w) * 1.1;
+  const menique = dist(lm[20], w) > dist(lm[17], w) * 1.1;
   
-  const indice = dTip(8, 6);
-  const medio = dTip(12, 10);
-  const anular = dTip(16, 14);
-  const menique = dTip(20, 18);
+  // 2. Evaluar pulgar (comparando distancia al meñique, es más preciso que solo mirar el eje Y)
+  const pulgarLateral = dist(lm[4], lm[17]) > dist(lm[2], lm[17]) * 1.15; 
+  const pulgarArribaPos = lm[4].y < lm[3].y - 0.015 && lm[3].y < lm[2].y - 0.015;
   
-  // El pulgar requiere lógica especial: comparamos la distancia al meñique
-  const dPulgarMenique = dist(lm[4], lm[17]);
-  const pulgarLateral = dPulgarMenique > 0.12; 
+  const pulgar = pulgarLateral || pulgarArribaPos;
   
-  // Verificación extra por si está apuntando hacia arriba
-  const pulgarArriba = lm[4].y < lm[3].y - 0.015 && lm[3].y < lm[2].y - 0.015;
-  
-  const pulgar = (pulgarLateral || pulgarArriba);
-  
-  // Si el pulgar está arriba y el resto cerrado, es el comando "Siguiente"
-  if (pulgarArriba && !indice && !medio && !anular && !menique) {
+  // 3. Comando "Siguiente" (👍)
+  if (pulgarArribaPos && !indice && !medio && !anular && !menique) {
     return { patron: 'pulgar_arriba', dedos: 1 };
   }
   
@@ -486,9 +483,9 @@ function analizarMano(lm){
   if (indice) dedosExtendidos.push('indice');
   if (medio) dedosExtendidos.push('medio');
   if (menique) dedosExtendidos.push('menique');
-  if (pulgar && !pulgarArriba) dedosExtendidos.push('pulgar');
+  if (pulgar && !pulgarArribaPos) dedosExtendidos.push('pulgar');
   
-  // Ordenamos para que coincida exactamente con las llaves de COMANDOS
+  // El orden debe coincidir con las llaves del objeto COMANDOS
   dedosExtendidos.sort();
   
   return { 
@@ -561,7 +558,6 @@ function cargarVideo(idx){
   video.play()
     .then(() => actualizarBotonMute())
     .catch(e => {
-      console.warn('Play con audio falló, reintentando silenciado:', e);
       video.muted = true;
       video.play()
         .then(() => actualizarBotonMute())
@@ -643,33 +639,6 @@ function etiqueta(texto,x,y,color){
   ctx.fillText(texto,bx+pad,by+h/2);
 }
 
-// ✅ MEJORA: Filtro de suavizado para evitar temblores
-function suavizarLandmarks(manosRaw) {
-  if (!manosRaw || manosRaw.length === 0) {
-    estado.smoothLandmarks = null;
-    return [];
-  }
-  
-  const alpha = 0.55; // Mayor = más reactivo, Menor = más suave
-  
-  if (!estado.smoothLandmarks || estado.smoothLandmarks.length !== manosRaw.length) {
-    estado.smoothLandmarks = manosRaw.map(m => m.map(p => ({...p})));
-    return estado.smoothLandmarks;
-  }
-
-  return manosRaw.map((mano, i) => mano.map((p, j) => {
-    const prev = estado.smoothLandmarks[i][j];
-    if (!prev) return {...p};
-    const newP = {
-      x: prev.x + alpha * (p.x - prev.x),
-      y: prev.y + alpha * (p.y - prev.y),
-      z: (prev.z||0) + alpha * ((p.z||0) - (prev.z||0))
-    };
-    estado.smoothLandmarks[i][j] = newP;
-    return newP;
-  }));
-}
-
 function onResults(res){
   framesFps++;
   const ahora=performance.now();
@@ -681,8 +650,7 @@ function onResults(res){
   if (!cw || !ch) ajustarCanvas();
   ctx.clearRect(0,0,cw,ch);
 
-  const manosRaw = res.multiHandLandmarks || [];
-  const manos = suavizarLandmarks(manosRaw);
+  const manos = res.multiHandLandmarks || [];
 
   if (manos.length===0){
     estado.framesSinManos++;
@@ -745,13 +713,28 @@ function cargarMediaPipe(){
   return handsPromise;
 }
 
+// ✅ OPTIMIZACIÓN: Evitar que se acumulen frames si el procesador está lento
 async function bucle(){
   if(!estado.corriendo) return;
   const ahora=performance.now();
-  if(estado.activeCam && ahora-lastSend>40 && estado.hands){
-    lastSend=ahora;
-    try{ await estado.hands.send({image: estado.activeCam}); } catch(e){}
+  
+  if (estado.enviandoFrame) {
+    requestAnimationFrame(bucle);
+    return;
   }
+
+  // Límite de 30 FPS para no saturar el Moto E40
+  if(estado.activeCam && ahora-lastSend > 33 && estado.hands){
+    lastSend = ahora;
+    estado.enviandoFrame = true;
+    try{ 
+      await estado.hands.send({image: estado.activeCam}); 
+    } catch(e){
+    } finally {
+      estado.enviandoFrame = false;
+    }
+  }
+  
   if(estado.corriendo) requestAnimationFrame(bucle);
 }
 
@@ -789,17 +772,17 @@ async function iniciar(){
         cam.srcObject.getTracks().forEach(t => t.stop());
       }
 
+      // ✅ OPTIMIZACIÓN: Resolución ideal reducida a 480x360 para mayor fluidez
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { 
-          width: { ideal: 640 }, 
-          height: { ideal: 480 }, 
-          frameRate: { ideal: 24, max: 30 } 
+          width: { ideal: 480 }, 
+          height: { ideal: 360 }, 
+          frameRate: { ideal: 30, max: 30 } 
         }, 
         audio: false
       });
       cam.srcObject = stream;
       
-      // ✅ FIX: Esperar a que el video esté realmente listo antes de mostrarlo
       await new Promise((resolve) => {
         if (cam.readyState >= 2) return resolve();
         cam.onloadeddata = resolve;
@@ -821,11 +804,13 @@ async function iniciar(){
 
     setEstado('3/4 · Iniciando detector...');
     estado.hands = new Hands({ locateFile: f => CONFIG.mediapipeBase+'/'+f });
+    
+    // ✅ OPTIMIZACIÓN CRÍTICA: modelComplexity 0 (Lite) para volar en celulares
     estado.hands.setOptions({
       maxNumHands: 2, 
-      modelComplexity: 1, // ✅ MEJORA: Precisión aumentada
-      minDetectionConfidence: 0.65, 
-      minTrackingConfidence: 0.6
+      modelComplexity: 0, 
+      minDetectionConfidence: 0.6, 
+      minTrackingConfidence: 0.5
     });
     estado.hands.onResults(onResults);
 
