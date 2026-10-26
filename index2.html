@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#05070d">
+<title>IA Holográfica · Control por Gestos</title>
+<style>
+  :root {
+    --verde: #38ffb0;
+    --cian: #00d1ff;
+    --fondo: #05070d;
+    --panel: rgba(6,14,24,.85);
+    --pip-size: clamp(110px, 26vw, 240px);
+    --pip-size-fs: clamp(80px, 14vw, 140px);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
+  html, body { height: 100%; height: 100dvh; overflow: hidden; }
+  body {
+    background: radial-gradient(circle at 50% 30%, #0a1420 0%, #05070d 70%);
+    color: #e8f6ff;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+
+  #app { position: fixed; inset: 0; display: flex; flex-direction: column; }
+
+  /* ═══ VIDEO STAGE ═══ */
+  #videoStage {
+    position: absolute; inset: 4px;
+    border-radius: 14px; overflow: hidden;
+    background: #000;
+    box-shadow: 0 0 40px rgba(56,255,176,.12), inset 0 0 40px rgba(0,0,0,.5);
+  }
+  #video { width: 100%; height: 100%; object-fit: contain; display: block; }
+  #mensajeVideo {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    color: #5a8ba8; font-size: 13px; text-align: center; padding: 20px;
+    background: #000; z-index: 3;
+  }
+  #mensajeVideo.oculto { display: none; }
+
+  #videoStage::after {
+    content: '';
+    position: absolute; bottom: 8px; left: 8px;
+    width: 44px; height: 44px;
+    border-left: 2px solid rgba(56,255,176,.5);
+    border-bottom: 2px solid rgba(56,255,176,.5);
+    border-bottom-left-radius: 10px;
+    pointer-events: none; z-index: 4; opacity: .6;
+  }
+
+  /* ═══ HUD ═══ */
+  #hud {
+    position: absolute; top: 12px; left: 12px; right: 12px;
+    display: flex; gap: 6px; flex-wrap: wrap;
+    z-index: 15; pointer-events: none; font-size: 11px;
+  }
+  .chip {
+    background: var(--panel);
+    border: 1px solid rgba(56,255,176,.35);
+    border-radius: 999px; padding: 4px 10px;
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  }
+  .chip b { color: var(--verde); font-weight: 700; }
+
+  /* ═══ PROGRESO ═══ */
+  #progreso {
+    position: absolute; top: 48px; left: 50%; transform: translateX(-50%);
+    min-width: 190px; max-width: 85vw;
+    background: var(--panel);
+    border: 1px solid rgba(56,255,176,.4);
+    border-radius: 10px; padding: 6px 12px;
+    font-size: 11px; z-index: 15; display: none;
+    box-shadow: 0 0 24px rgba(56,255,176,.25);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  }
+  #progreso.visible { display: block; }
+  #progresoTexto { color: #e8f6ff; font-weight: 600; margin-bottom: 4px; }
+  #progresoBarra { height: 4px; background: #1a2f45; border-radius: 3px; overflow: hidden; }
+  #progresoFill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--verde), var(--cian));
+    width: 0%; transition: width .08s linear;
+    box-shadow: 0 0 8px rgba(56,255,176,.7);
+  }
+
+  /* ═══ CAM PiP ═══ */
+  #camPiP {
+    position: absolute; right: 12px; bottom: 12px;
+    width: var(--pip-size);
+    aspect-ratio: 4/3;
+    border-radius: 14px; overflow: hidden;
+    border: 2px solid rgba(56,255,176,.6);
+    background: #000; z-index: 10;
+    box-shadow: 0 0 20px rgba(56,255,176,.35), 0 4px 16px rgba(0,0,0,.7);
+    transition: width .35s cubic-bezier(.4,0,.2,1), opacity .35s ease,
+                border-color .35s ease, box-shadow .35s ease;
+  }
+  #camPiP.fullscreen {
+    width: var(--pip-size-fs);
+    opacity: .6;
+    border-color: rgba(56,255,176,.25);
+    box-shadow: 0 0 12px rgba(56,255,176,.15), 0 4px 16px rgba(0,0,0,.5);
+  }
+  #camPiP.fullscreen:active { opacity: 1; }
+  #camPiP.gesture-active {
+    border-color: var(--verde);
+    box-shadow: 0 0 30px rgba(56,255,176,.7), 0 0 60px rgba(56,255,176,.35),
+                0 4px 16px rgba(0,0,0,.7);
+  }
+  #cam, #overlay { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  #cam { object-fit: cover; transform: scaleX(-1); }
+  #overlay { pointer-events: none; }
+
+  #camPiP::after {
+    content: '';
+    position: absolute; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(56,255,176,.5), transparent);
+    box-shadow: 0 0 6px rgba(56,255,176,.4);
+    animation: scanLine 4s linear infinite;
+    pointer-events: none; z-index: 5; opacity: .5;
+  }
+  @keyframes scanLine { 0% { top: 0; } 100% { top: 100%; } }
+
+  /* ═══ BOTONES FLOTANTES ═══ */
+  .btn-flotante {
+    position: absolute; width: 38px; height: 38px;
+    border-radius: 50%; background: var(--panel);
+    border: 1px solid rgba(56,255,176,.5);
+    color: var(--verde); font-size: 16px; z-index: 15;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    box-shadow: 0 0 12px rgba(56,255,176,.2);
+  }
+  .btn-flotante:active { transform: scale(.92); box-shadow: 0 0 20px rgba(56,255,176,.5); }
+  #btnAyuda { right: 12px; top: 12px; font-size: 18px; font-weight: 700; }
+  #btnMute { right: 58px; top: 12px; }
+
+  /* ═══ AYUDA ═══ */
+  #ayuda {
+    position: absolute; top: 60px; right: 12px;
+    background: var(--panel);
+    border: 1px solid rgba(56,255,176,.3);
+    border-radius: 12px; padding: 10px 14px;
+    font-size: 11px; line-height: 1.7;
+    color: #8fb4c9; z-index: 14; display: none; max-width: 240px;
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  }
+  #ayuda.visible { display: block; }
+  #ayuda b { color: var(--verde); }
+  #ayuda .titulo { color: var(--verde); font-weight: 700; margin-bottom: 6px; font-size: 12px; }
+
+  /* ═══ PANTALLAS ═══ */
+  .pantalla {
+    position: absolute; inset: 0;
+    background: rgba(3,6,12,.96);
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 14px; padding: 24px;
+    text-align: center; z-index: 20;
+    backdrop-filter: blur(10px);
+  }
+  .pantalla.oculto { display: none; }
+  .pantalla h1 { font-size: 20px; font-weight: 600; }
+  .pantalla p { font-size: 12px; color: #8fb4c9; max-width: 340px; line-height: 1.5; }
+  .pantalla button {
+    background: linear-gradient(135deg, var(--verde), var(--cian));
+    color: #04140d; border: 0; border-radius: 999px;
+    padding: 13px 30px; font-size: 14px; font-weight: 700;
+    cursor: pointer; min-width: 200px;
+    box-shadow: 0 4px 20px rgba(56,255,176,.3);
+  }
+  .pantalla button:disabled { opacity: .5; }
+  .pantalla button.sec {
+    background: transparent; color: var(--verde);
+    border: 1.5px solid var(--verde); box-shadow: none;
+  }
+  #estado { font-size: 12px; color: var(--verde); min-height: 16px; }
+  #error { color: #ff7b7b; font-size: 12px; max-width: 340px; line-height: 1.4; }
+
+  #configPanel {
+    width: 100%; max-width: 400px;
+    display: flex; flex-direction: column; gap: 8px;
+    max-height: 55vh; overflow-y: auto;
+  }
+  #configPanel label {
+    display: flex; flex-direction: column; gap: 3px;
+    font-size: 11px; color: #8fb4c9; text-align: left;
+  }
+  #configPanel input {
+    background: #0a1420; border: 1px solid #1e344a;
+    color: #e8f6ff; padding: 9px 11px; border-radius: 8px;
+    font-size: 12px; transition: border-color .2s;
+  }
+  #configPanel input:focus {
+    outline: none; border-color: var(--verde);
+    box-shadow: 0 0 0 2px rgba(56,255,176,.15);
+  }
+
+  @media (min-width: 768px) {
+    #videoStage { inset: 12px; border-radius: 20px; }
+    #hud { font-size: 13px; top: 20px; left: 20px; right: 20px; }
+    #camPiP { right: 20px; bottom: 20px; border-radius: 18px; }
+    #progreso { top: 60px; }
+    .pantalla h1 { font-size: 24px; }
+    .pantalla p { font-size: 14px; }
+  }
+  @media (max-width: 360px) {
+    :root {
+      --pip-size: clamp(90px, 28vw, 140px);
+      --pip-size-fs: clamp(60px, 12vw, 90px);
+    }
+    .chip { padding: 3px 8px; font-size: 10px; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div id="videoStage">
+    <video id="video" playsinline loop muted></video>
+    <div id="mensajeVideo">Muestra un gesto frente a la cámara para reproducir un video</div>
+  </div>
+
+  <div id="hud">
+    <div class="chip">FPS <b id="fps">0</b></div>
+    <div class="chip">Gesto <b id="gestoActual">—</b></div>
+    <div class="chip">Video <b id="videoActual">—</b>/5</div>
+  </div>
+
+  <div id="progreso">
+    <div id="progresoTexto">—</div>
+    <div id="progresoBarra"><div id="progresoFill"></div></div>
+  </div>
+
+  <button class="btn-flotante" id="btnAyuda">?</button>
+  <button class="btn-flotante" id="btnMute">🔇</button>
+
+  <div id="ayuda">
+    <div class="titulo">🖐️ Gestos</div>
+    <div><b>☝️</b> Índice → Video 1</div>
+    <div><b>✌️</b> Índice+Medio → Video 2</div>
+    <div><b>🤟</b> 3 dedos → Video 3</div>
+    <div><b>🤙</b> Pulgar+Meñique → Video 4</div>
+    <div><b>🖐️</b> 5 dedos → Video 5</div>
+    <div><b>✊</b> Puño → Play/Pausa</div>
+    <div><b>👍</b> Pulgar arriba → Siguiente</div>
+    <div><b>🤟❤️</b> Te amo → Pantalla completa</div>
+    <div style="margin-top:6px;color:#5a8ba8;font-size:10px;">Mantén 1.2s cada gesto</div>
+  </div>
+
+  <div id="camPiP">
+    <video id="cam" playsinline muted autoplay></video>
+    <canvas id="overlay"></canvas>
+  </div>
+
+  <div id="inicio" class="pantalla">
+    <h1>🤖 Control por Gestos</h1>
+    <p>Controla 5 videos con señas. Mantén cada gesto 1.2 segundos para activarlo.</p>
+    <div id="estado">Pulsa Iniciar para comenzar</div>
+    <button id="btnIniciar">Iniciar cámara</button>
+    <button id="btnConfig" class="sec">⚙️ Configurar URLs</button>
+    <div id="error"></div>
+  </div>
+
+  <div id="config" class="pantalla oculto">
+    <h1>⚙️ URLs de los videos</h1>
+    <p>Enlaces directos (.mp4). No YouTube/Drive.</p>
+    <div id="configPanel"></div>
+    <button id="btnGuardar">Guardar</button>
+    <button id="btnCancelar" class="sec">Cancelar</button>
+  </div>
+
+</div>
+
+<script>
+let VIDEOS = ['video1.mp4','video2.mp4','video3.mp4','video4.mp4','video5.mp4'];
+try {
+  const s = localStorage.getItem('ia_gestos_videos');
+  if (s) { const a = JSON.parse(s); if (Array.isArray(a) && a.length===5) VIDEOS = a; }
+} catch(e) {}
+
+const COMANDOS = {
+  'indice':                             { tipo:'video',      valor:0, nombre:'☝️ Video 1' },
+  'indice_medio':                       { tipo:'video',      valor:1, nombre:'✌️ Video 2' },
+  'anular_indice_medio':                { tipo:'video',      valor:2, nombre:'🤟 Video 3' },
+  'menique_pulgar':                     { tipo:'video',      valor:3, nombre:'🤙 Video 4' },
+  'anular_indice_medio_menique_pulgar': { tipo:'video',      valor:4, nombre:'🖐️ Video 5' },
+  'nada':                               { tipo:'playpause',           nombre:'✊ Play/Pausa' },
+  'pulgar_arriba':                      { tipo:'siguiente',           nombre:'👍 Siguiente' },
+  'indice_menique_pulgar':              { tipo:'fullscreen',          nombre:'🤟❤️ Pantalla completa' }
+};
+
+const CONFIG = {
+  framesRequeridos: 28, framesReset: 15, cooldownMs: 700,
+  fingerThreshold: 1.18, thumbThreshold: 1.35,
+  mediapipeBase: 'https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240'
+};
+
+const estado = {
+  hands:null, corriendo:false, indiceVideo:0,
+  gestoActual:null, framesEstables:0,
+  esperandoNeutro:false, comandoEjecutado:null,
+  framesSinManos:0, ultimaAccion:0, esFullscreen:false
+};
+
+const $ = id => document.getElementById(id);
+const cam = $('cam');
+const video = $('video');
+const canvas = $('overlay');
+const ctx = canvas.getContext('2d');
+const camPiP = $('camPiP');
+
+let cw=0, ch=0, fps=0, framesFps=0, tFps=performance.now(), lastSend=0;
+
+const setEstado = m => { const e=$('estado'); if(e) e.textContent=m; };
+const setError  = m => { const e=$('error');  if(e) e.textContent=m; };
+
+function ajustarCanvas(){
+  const r = canvas.getBoundingClientRect();
+  if (r.width <= 0 || r.height <= 0) return;
+  cw = canvas.width  = Math.round(r.width);
+  ch = canvas.height = Math.round(r.height);
+}
+window.addEventListener('resize', ajustarCanvas);
+window.addEventListener('orientationchange', () => setTimeout(ajustarCanvas, 300));
+camPiP.addEventListener('transitionend', (e) => {
+  if (e.propertyName === 'width') ajustarCanvas();
+});
+
+function proy(lm){
+  const vw=cam.videoWidth||640, vh=cam.videoHeight||480;
+  const s=Math.max(cw/vw, ch/vh);
+  const dw=vw*s, dh=vh*s;
+  const ox=(cw-dw)/2, oy=(ch-dh)/2;
+  return { x: cw-(ox+lm.x*dw), y: oy+lm.y*dh };
+}
+function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y, (a.z||0)-(b.z||0)); }
+
+function analizarMano(lm){
+  const w = lm[0];
+  const indice  = dist(lm[8], w)  > dist(lm[5], w)  * CONFIG.fingerThreshold;
+  const medio   = dist(lm[12], w) > dist(lm[9], w)  * CONFIG.fingerThreshold;
+  const anular  = dist(lm[16], w) > dist(lm[13], w) * CONFIG.fingerThreshold;
+  const menique = dist(lm[20], w) > dist(lm[17], w) * CONFIG.fingerThreshold;
+  const pulgar  = dist(lm[4], lm[5]) > dist(lm[2], lm[5]) * CONFIG.thumbThreshold;
+
+  const pulgarArriba = pulgar && !indice && !medio && !anular && !menique
+    && lm[4].y < lm[3].y - 0.015 && lm[3].y < lm[2].y - 0.015;
+  if (pulgarArriba) return { patron:'pulgar_arriba', dedos:1 };
+
+  const a=[];
+  if(anular)  a.push('anular');
+  if(indice)  a.push('indice');
+  if(medio)   a.push('medio');
+  if(menique) a.push('menique');
+  if(pulgar)  a.push('pulgar');
+  return { patron: a.length===0 ? 'nada' : a.join('_'), dedos:a.length };
+}
+
+function procesarPatron(patron){
+  if (estado.esperandoNeutro && patron !== estado.comandoEjecutado){
+    estado.esperandoNeutro = false;
+    estado.comandoEjecutado = null;
+  }
+  if (estado.esperandoNeutro) return;
+
+  if (patron === estado.gestoActual) estado.framesEstables++;
+  else { estado.gestoActual = patron; estado.framesEstables = 1; }
+
+  if (estado.framesEstables >= CONFIG.framesRequeridos){
+    const cmd = COMANDOS[patron];
+    const ahora = performance.now();
+    if (cmd && (ahora - estado.ultimaAccion) > CONFIG.cooldownMs){
+      ejecutarComando(cmd);
+      estado.ultimaAccion = ahora;
+      estado.esperandoNeutro = true;
+      estado.comandoEjecutado = patron;
+      estado.framesEstables = 0;
+    }
+  }
+}
+
+function ejecutarComando(cmd){
+  if (cmd.tipo==='video') cargarVideo(cmd.valor);
+  else if (cmd.tipo==='playpause') togglePlay();
+  else if (cmd.tipo==='siguiente') cargarVideo((estado.indiceVideo+1)%VIDEOS.length);
+  else if (cmd.tipo==='fullscreen') toggleFullscreen();
+}
+
+function toggleFullscreen(){
+  estado.esFullscreen = !estado.esFullscreen;
+  camPiP.classList.toggle('fullscreen', estado.esFullscreen);
+  if (estado.esFullscreen) $('ayuda').classList.remove('visible');
+  setTimeout(ajustarCanvas, 380);
+}
+
+function cargarVideo(idx){
+  if (idx<0 || idx>=VIDEOS.length) return;
+  const url = (VIDEOS[idx]||'').trim();
+  if (!url){ mostrarMensaje('Video '+(idx+1)+' sin URL'); return; }
+  estado.indiceVideo = idx;
+  video.src = url;
+  video.currentTime = 0;
+  video.play().catch(e => {
+    console.warn('Play falló:', e);
+    video.muted = true;
+    video.play().catch(() => mostrarMensaje('No se pudo reproducir Video '+(idx+1)));
+  });
+  ocultarMensaje();
+  $('videoActual').textContent = idx + 1;
+  actualizarBotonMute();
+}
+
+function togglePlay(){
+  if (!video.src) return;
+  if (video.paused) video.play().catch(e=>console.warn(e));
+  else video.pause();
+}
+
+function mostrarMensaje(m){
+  const el=$('mensajeVideo'); el.textContent=m;
+  el.classList.remove('oculto'); video.style.visibility='hidden';
+}
+function ocultarMensaje(){
+  $('mensajeVideo').classList.add('oculto'); video.style.visibility='visible';
+}
+
+const CONEXIONES=[[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],
+  [10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[13,17],[17,18],[18,19],[19,20],[0,17]];
+const COLORES=['#38ffb0','#00d1ff'];
+
+function rrect(x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+
+function dibujarMano(lm,idx,esActiva,patron){
+  const color=COLORES[idx%COLORES.length];
+  const pts=lm.map(proy);
+  const gr=Math.max(1.5,Math.round(cw/180));
+  const rad=Math.max(1.8,gr*1.4);
+
+  ctx.lineCap='round'; ctx.lineJoin='round';
+  ctx.strokeStyle=color; ctx.lineWidth=gr;
+  ctx.globalAlpha = esActiva ? 0.9 : 0.4;
+  ctx.beginPath();
+  for(const [a,b] of CONEXIONES){
+    ctx.moveTo(pts[a].x,pts[a].y);
+    ctx.lineTo(pts[b].x,pts[b].y);
+  }
+  ctx.stroke();
+
+  ctx.globalAlpha = esActiva ? 1 : 0.5;
+  ctx.fillStyle = color;
+  for(let i=0;i<pts.length;i++){
+    ctx.beginPath();
+    ctx.arc(pts[i].x,pts[i].y, i===0?rad*1.3:rad, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  if (esActiva && cw > 120){
+    let minY=Infinity, sx=0;
+    for(const p of pts) if(p.y<minY){ minY=p.y; sx=p.x; }
+    const cmd = COMANDOS[patron];
+    etiqueta(cmd ? cmd.nombre : '❓ '+patron, sx, minY, color);
+  }
+  ctx.globalAlpha=1;
+}
+
+function etiqueta(texto,x,y,color){
+  const fs=Math.max(9,Math.round(cw/22));
+  const pad=Math.round(fs*0.5);
+  ctx.font='600 '+fs+'px -apple-system,sans-serif';
+  const w=ctx.measureText(texto).width+pad*2;
+  const h=fs+pad*2;
+  let bx=Math.max(2,Math.min(cw-w-2,x-w/2));
+  let by=y-h-6; if(by<2) by=y+8;
+
+  ctx.fillStyle='rgba(4,10,18,.85)';
+  rrect(bx,by,w,h,5); ctx.fill();
+  ctx.strokeStyle=color; ctx.lineWidth=1;
+  rrect(bx,by,w,h,5); ctx.stroke();
+  ctx.fillStyle=color; ctx.textAlign='left'; ctx.textBaseline='middle';
+  ctx.fillText(texto,bx+pad,by+h/2);
+}
+
+function onResults(res){
+  framesFps++;
+  const ahora=performance.now();
+  if(ahora-tFps>=1000){
+    fps=Math.round(framesFps*1000/(ahora-tFps));
+    framesFps=0; tFps=ahora;
+    $('fps').textContent=fps;
+  }
+  ctx.clearRect(0,0,cw,ch);
+
+  const manos = res.multiHandLandmarks || [];
+  if (manos.length===0){
+    estado.framesSinManos++;
+    if (estado.framesSinManos>CONFIG.framesReset){
+      estado.esperandoNeutro=false;
+      estado.comandoEjecutado=null;
+      estado.gestoActual=null;
+      estado.framesEstables=0;
+    }
+    $('gestoActual').textContent='—';
+    camPiP.classList.remove('gesture-active');
+    actualizarProgreso(null);
+    return;
+  }
+  estado.framesSinManos=0;
+
+  const info = analizarMano(manos[0]);
+  for(let i=0;i<manos.length;i++){
+    dibujarMano(manos[i], i, i===0, i===0?info.patron:null);
+  }
+
+  const cmd = COMANDOS[info.patron];
+  $('gestoActual').textContent = cmd ? cmd.nombre : (info.patron||'—');
+
+  if (cmd && estado.framesEstables > 5 && !estado.esperandoNeutro) {
+    camPiP.classList.add('gesture-active');
+  } else {
+    camPiP.classList.remove('gesture-active');
+  }
+
+  procesarPatron(info.patron);
+  actualizarProgreso(info.patron);
+}
+
+let lastProgressUpdate=0;
+function actualizarProgreso(patron){
+  const ahora=performance.now();
+  if(ahora-lastProgressUpdate<60) return;
+  lastProgressUpdate=ahora;
+  const cmd=COMANDOS[patron];
+  const box=$('progreso');
+  if(!cmd || estado.esperandoNeutro){ box.classList.remove('visible'); return; }
+  box.classList.add('visible');
+  const pct=Math.min(100,(estado.framesEstables/CONFIG.framesRequeridos)*100);
+  $('progresoTexto').textContent = cmd.nombre+' · '+Math.round(pct)+'%';
+  $('progresoFill').style.width = pct+'%';
+}
+
+let handsPromise=null;
+function cargarMediaPipe(){
+  if (handsPromise) return handsPromise;
+  handsPromise = new Promise((resolve,reject)=>{
+    if (window.Hands) return resolve();
+    const s=document.createElement('script');
+    s.src=CONFIG.mediapipeBase+'/hands.js';
+    s.crossOrigin='anonymous';
+    s.onload=()=> window.Hands ? resolve() : reject(new Error('Hands no disponible'));
+    s.onerror=()=> reject(new Error('No se pudo cargar MediaPipe'));
+    document.head.appendChild(s);
+  });
+  return handsPromise;
+}
+
+async function bucle(){
+  if(!estado.corriendo) return;
+  const ahora=performance.now();
+  if(cam.readyState>=2 && ahora-lastSend>40 && estado.hands){
+    lastSend=ahora;
+    try{ await estado.hands.send({image:cam}); } catch(e){}
+  }
+  if(estado.corriendo) requestAnimationFrame(bucle);
+}
+
+async function iniciar(){
+  const btn=$('btnIniciar');
+  btn.disabled=true; btn.textContent='Iniciando...';
+  setError('');
+
+  try{
+    setEstado('1/4 · Cargando MediaPipe...');
+    await cargarMediaPipe();
+
+    setEstado('2/4 · Solicitando cámara...');
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+      throw new Error('Tu navegador no soporta cámara. Necesitas HTTPS.');
+    }
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video:{ facingMode:'user', width:{ideal:480}, height:{ideal:360},
+        frameRate:{ideal:24, max:30} }, audio:false
+    });
+    cam.srcObject = stream;
+    await cam.play();
+
+    const ajustarAspecto = () => {
+      if (cam.videoWidth && cam.videoHeight) {
+        camPiP.style.aspectRatio = cam.videoWidth + '/' + cam.videoHeight;
+        setTimeout(ajustarCanvas, 50);
+      }
+    };
+    if (cam.videoWidth) ajustarAspecto();
+    else cam.addEventListener('loadedmetadata', ajustarAspecto, { once:true });
+
+    setEstado('3/4 · Iniciando detector...');
+    estado.hands = new Hands({ locateFile: f => CONFIG.mediapipeBase+'/'+f });
+    estado.hands.setOptions({
+      maxNumHands:2, modelComplexity:0,
+      minDetectionConfidence:0.6, minTrackingConfidence:0.5
+    });
+    estado.hands.onResults(onResults);
+
+    setEstado('4/4 · Calibrando...');
+    await estado.hands.send({ image: cam });
+
+    ajustarCanvas();
+    estado.corriendo = true;
+    $('inicio').classList.add('oculto');
+    if (VIDEOS[0] && VIDEOS[0].trim()) cargarVideo(0);
+    bucle();
+
+  } catch(e){
+    console.error(e);
+    setError('Error: ' + (e.message||e.name));
+    setEstado('Falló el inicio');
+    btn.disabled=false; btn.textContent='Reintentar';
+  }
+}
+
+$('btnIniciar').addEventListener('click', iniciar);
+
+$('btnConfig').addEventListener('click', ()=>{
+  construirPanelConfig();
+  $('inicio').classList.add('oculto');
+  $('config').classList.remove('oculto');
+});
+
+$('btnGuardar').addEventListener('click', ()=>{
+  const urls=[];
+  for(let i=0;i<5;i++) urls.push(($('url'+i).value||'').trim());
+  VIDEOS = urls;
+  try{ localStorage.setItem('ia_gestos_videos', JSON.stringify(urls)); }catch(e){}
+  $('config').classList.add('oculto');
+  $('inicio').classList.remove('oculto');
+  if (VIDEOS[estado.indiceVideo]) cargarVideo(estado.indiceVideo);
+});
+
+$('btnCancelar').addEventListener('click', ()=>{
+  $('config').classList.add('oculto');
+  $('inicio').classList.remove('oculto');
+});
+
+$('btnAyuda').addEventListener('click', ()=>{
+  $('ayuda').classList.toggle('visible');
+});
+
+$('btnMute').addEventListener('click', ()=>{
+  video.muted = !video.muted;
+  actualizarBotonMute();
+});
+
+function actualizarBotonMute(){
+  $('btnMute').textContent = video.muted ? '🔇' : '🔊';
+}
+
+function construirPanelConfig(){
+  const p=$('configPanel'); p.innerHTML='';
+  for(let i=0;i<5;i++){
+    const lbl=document.createElement('label');
+    lbl.textContent='Video '+(i+1);
+    const inp=document.createElement('input');
+    inp.id='url'+i; inp.type='url';
+    inp.placeholder='video'+(i+1)+'.mp4';
+    inp.value=VIDEOS[i]||'';
+    lbl.appendChild(inp);
+    p.appendChild(lbl);
+  }
+}
+
+ajustarCanvas();
+setEstado('Listo para iniciar');
+</script>
+</body>
+</html>
