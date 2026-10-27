@@ -20,12 +20,20 @@
     color: #e8f6ff;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   }
+
   #app { position: fixed; inset: 0; display: flex; flex-direction: column; }
+
+  /* ═══ VIDEO STAGE ═══ */
   #videoStage {
     position: absolute; inset: 4px;
     border-radius: 14px; overflow: hidden;
     background: #000;
     box-shadow: 0 0 40px rgba(56,255,176,.12), inset 0 0 40px rgba(0,0,0,.5);
+  }
+  #videoStage.loading { animation: videoFlash .7s ease-out; }
+  @keyframes videoFlash {
+    0% { box-shadow: 0 0 60px rgba(56,255,176,.6), inset 0 0 60px rgba(56,255,176,.2); }
+    100% { box-shadow: 0 0 40px rgba(56,255,176,.12), inset 0 0 40px rgba(0,0,0,.5); }
   }
   #video { width: 100%; height: 100%; object-fit: contain; display: block; }
   #mensajeVideo {
@@ -35,6 +43,7 @@
     background: #000; z-index: 3;
   }
   #mensajeVideo.oculto { display: none; }
+
   #videoStage::after {
     content: '';
     position: absolute; bottom: 8px; left: 8px;
@@ -45,6 +54,7 @@
     pointer-events: none; z-index: 4; opacity: .6;
   }
 
+  /* ═══ WELCOME ═══ */
   #welcome {
     position: absolute; inset: 0;
     background: rgba(3,6,12,.94);
@@ -53,6 +63,7 @@
     z-index: 8; text-align: center; overflow: hidden;
   }
   #welcome.oculto { display: none; }
+
   #welcome::before {
     content: '';
     position: absolute; inset: -64px;
@@ -62,9 +73,14 @@
     background-size: 32px 32px;
     animation: gridMove 18s linear infinite;
     will-change: transform;
-    pointer-events: none; opacity: .55;
+    pointer-events: none;
+    opacity: .55;
   }
-  @keyframes gridMove { 100% { transform: translate(32px, 32px); } }
+  @keyframes gridMove {
+    0% { transform: translate(0, 0); }
+    100% { transform: translate(32px, 32px); }
+  }
+
   #welcome::after {
     content: '';
     position: absolute; left: 0; right: 0; top: 0; height: 2px;
@@ -79,6 +95,7 @@
     90% { opacity: 1; }
     100% { top: 100%; opacity: 0; }
   }
+
   #welcome .boot {
     position: relative; z-index: 1;
     display: inline-block;
@@ -91,6 +108,7 @@
   }
   @keyframes reveal { to { clip-path: inset(0 0 0 0); } }
   @keyframes blink { 50% { border-color: transparent; } }
+
   #welcome h1 {
     position: relative; z-index: 1;
     font-size: clamp(20px, 5.2vw, 32px);
@@ -112,13 +130,15 @@
     border: 1px solid rgba(56,255,176,.25);
     border-radius: 10px; padding: 8px 10px;
     font-size: 11px; display: flex; align-items: center; gap: 8px;
-    cursor: pointer; text-align: left;
+    cursor: pointer; transition: background .2s, border-color .2s, transform .1s;
+    text-align: left;
   }
-  .gestos-grid > div:active { background: rgba(56,255,176,.15); border-color: var(--verde); }
-  .gestos-grid .emoji { font-size: 20px; flex-shrink: 0; }
+  .gestos-grid > div:active { background: rgba(56,255,176,.15); border-color: var(--verde); transform: scale(.97); }
+  .gestos-grid .emoji { font-size: 20px; flex-shrink: 0; filter: drop-shadow(0 0 6px rgba(56,255,176,.3)); }
   .gestos-grid .label { color: #e8f6ff; font-weight: 600; font-size: 11px; }
   .gestos-grid .hint { color: #5a8ba8; font-size: 10px; display: block; margin-top: 1px; }
 
+  /* ═══ HUD ═══ */
   #hud {
     position: absolute; top: 12px; left: 12px;
     display: flex; gap: 6px; flex-wrap: wrap; max-width: calc(100% - 180px);
@@ -130,20 +150,23 @@
   }
   .chip b { color: var(--verde); font-weight: 700; }
 
+  /* ═══ PROGRESO ═══ */
   #progreso {
     position: absolute; top: 48px; left: 50%; transform: translateX(-50%);
     min-width: 190px; max-width: 85vw; background: var(--panel);
     border: 1px solid rgba(56,255,176,.4); border-radius: 10px; padding: 6px 12px;
     font-size: 11px; z-index: 15; display: none;
+    box-shadow: 0 0 24px rgba(56,255,176,.25);
   }
   #progreso.visible { display: block; }
   #progresoTexto { color: #e8f6ff; font-weight: 600; margin-bottom: 4px; }
   #progresoBarra { height: 4px; background: #1a2f45; border-radius: 3px; overflow: hidden; }
   #progresoFill {
     height: 100%; background: linear-gradient(90deg, var(--verde), var(--cian));
-    width: 0%; transition: width .08s linear;
+    width: 0%; transition: width .08s linear; box-shadow: 0 0 8px rgba(56,255,176,.7);
   }
 
+  /* ═══ CAM PiP ═══ */
   #camPiP {
     position: absolute; right: 12px; bottom: 12px;
     width: var(--pip-size); aspect-ratio: 4/3;
@@ -151,9 +174,13 @@
     border: 2px solid rgba(56,255,176,.6);
     background: #000; z-index: 10;
     box-shadow: 0 0 20px rgba(56,255,176,.35), 0 4px 16px rgba(0,0,0,.7);
-    transition: width .35s cubic-bezier(.4,0,.2,1), opacity .35s ease;
+    transition: width .35s cubic-bezier(.4,0,.2,1), opacity .35s ease, border-color .35s ease, box-shadow .35s ease;
   }
-  #camPiP.fullscreen { width: var(--pip-size-fs); opacity: .6; }
+  #camPiP.fullscreen {
+    width: var(--pip-size-fs); opacity: .6;
+    border-color: rgba(56,255,176,.25);
+    box-shadow: 0 0 12px rgba(56,255,176,.15), 0 4px 16px rgba(0,0,0,.5);
+  }
   #camPiP.fullscreen:active { opacity: 1; }
   #camPiP.gesture-active {
     border-color: var(--verde);
@@ -163,7 +190,7 @@
     content: ''; position: absolute; inset: -4px;
     border: 2px solid var(--verde); border-radius: 18px;
     animation: pulseRing 2s ease-out infinite;
-    pointer-events: none;
+    pointer-events: none; will-change: transform, opacity;
   }
   @keyframes pulseRing { 0% { transform: scale(1); opacity: .8; } 100% { transform: scale(1.22); opacity: 0; } }
 
@@ -174,10 +201,12 @@
     transform: scaleX(-1);
   }
   #camImg { display: none; }
+  
   #overlay {
     position: absolute; inset: 0; width: 100%; height: 100%;
     pointer-events: none; z-index: 2;
   }
+
   #camPiP::after {
     content: ''; position: absolute; left: 0; right: 0; top: 0; height: 2px;
     background: linear-gradient(90deg, transparent, rgba(56,255,176,.5), transparent);
@@ -185,19 +214,26 @@
     animation: scanLine 4s linear infinite;
     pointer-events: none; z-index: 5; opacity: .5;
   }
-  @keyframes scanLine { 100% { transform: translateY(calc(var(--pip-size) * 0.75)); } }
+  @keyframes scanLine {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(calc(var(--pip-size) * 0.75)); }
+  }
 
+  /* ═══ BOTONES FLOTANTES ═══ */
   .btn-flotante {
     position: absolute; width: 38px; height: 38px;
     border-radius: 50%; background: var(--panel);
     border: 1px solid rgba(56,255,176,.5); color: var(--verde); font-size: 16px; z-index: 15;
     cursor: pointer; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 12px rgba(56,255,176,.2);
   }
-  .btn-flotante:active { transform: scale(.92); }
+  .btn-flotante:active { transform: scale(.92); box-shadow: 0 0 20px rgba(56,255,176,.5); }
   #btnAyuda { right: 12px; top: 12px; font-size: 18px; font-weight: 700; }
   #btnMute { right: 58px; top: 12px; }
+  #btnFull { right: 104px; top: 12px; font-size: 17px; }
   #btnRend { left: 12px; bottom: 12px; font-size: 18px; }
 
+  /* ═══ AYUDA ═══ */
   #ayuda {
     position: absolute; top: 60px; right: 12px; background: var(--panel);
     border: 1px solid rgba(56,255,176,.3); border-radius: 12px; padding: 10px 14px;
@@ -207,6 +243,7 @@
   #ayuda b { color: var(--verde); }
   #ayuda .titulo { color: var(--verde); font-weight: 700; margin-bottom: 6px; font-size: 12px; }
 
+  /* ═══ PANTALLAS ═══ */
   .pantalla {
     position: absolute; inset: 0; background: rgba(3,6,12,.96);
     display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -220,9 +257,10 @@
     background: linear-gradient(135deg, var(--verde), var(--cian));
     color: #04140d; border: 0; border-radius: 999px;
     padding: 13px 30px; font-size: 14px; font-weight: 700; cursor: pointer; min-width: 200px;
+    box-shadow: 0 4px 20px rgba(56,255,176,.3);
   }
   .pantalla button:disabled { opacity: .5; }
-  .pantalla button.sec { background: transparent; color: var(--verde); border: 1.5px solid var(--verde); }
+  .pantalla button.sec { background: transparent; color: var(--verde); border: 1.5px solid var(--verde); box-shadow: none; }
   .pantalla button.small { padding: 9px 20px; font-size: 12px; min-width: 0; }
   #estado { font-size: 12px; color: var(--verde); min-height: 16px; }
   #error { color: #ff7b7b; font-size: 12px; max-width: 340px; line-height: 1.4; }
@@ -234,9 +272,10 @@
   #configPanel label, #rendPanel label { display: flex; flex-direction: column; gap: 3px; font-size: 11px; color: #8fb4c9; text-align: left; }
   #configPanel input, #rendPanel select {
     background: #0a1420; border: 1px solid #1e344a; color: #e8f6ff;
-    padding: 9px 11px; border-radius: 8px; font-size: 12px;
+    padding: 9px 11px; border-radius: 8px; font-size: 12px; transition: border-color .2s;
     font-family: inherit;
   }
+  #configPanel input:focus, #rendPanel select:focus { outline: none; border-color: var(--verde); box-shadow: 0 0 0 2px rgba(56,255,176,.15); }
   #configPanel .hint { font-size: 10px; color: #5a8ba8; text-align: left; margin-top: -4px; line-height: 1.4; }
 
   #rendPanel .checkbox-row {
@@ -248,13 +287,14 @@
   }
 
   #presetsGrid {
-    display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px;
-    width: 100%; max-width: 440px;
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px;
+    width: 100%; max-width: 400px;
   }
   #presetsGrid button {
-    padding: 10px 2px; font-size: 10px; min-width: 0;
+    padding: 10px 4px; font-size: 11px; min-width: 0;
     background: rgba(6,14,24,.85); border: 1px solid rgba(56,255,176,.3);
     color: #e8f6ff; border-radius: 8px; cursor: pointer; font-weight: 600;
+    box-shadow: none;
   }
   #presetsGrid button.activo {
     background: linear-gradient(135deg, var(--verde), var(--cian));
@@ -271,25 +311,15 @@
   body.reduce-effects #camPiP::after,
   body.reduce-effects #welcome::before,
   body.reduce-effects #camPiP.waiting:not(.fullscreen)::before,
-  body.reduce-effects #welcome .boot,
-  body.reduce-effects #welcome::after {
+  body.reduce-effects #videoStage.loading,
+  body.reduce-effects #welcome .boot {
     animation: none !important;
   }
-  body.reduce-effects #welcome::after { display: none !important; }
+  body.reduce-effects #welcome::after,
+  body.reduce-effects #videoStage::after {
+    display: none !important;
+  }
   body.reduce-effects #progresoFill { transition: none; }
-  body.reduce-effects #camPiP { transition: none; }
-
-  /* ═══ ULTRA MODE ═══ */
-  body.ultra-mode #camPiP::after { display: none !important; }
-  body.ultra-mode #overlay { display: none !important; }
-  body.ultra-mode #camPiP.waiting:not(.fullscreen)::before { display: none !important; }
-  body.ultra-mode #camPiP.gesture-active { box-shadow: 0 0 15px rgba(56,255,176,.5); }
-  body.ultra-mode #progresoBarra { display: none; }
-  body.ultra-mode #progreso { padding: 5px 10px; }
-
-  /* ═══ VIDEO ONLY MODE ═══ */
-  body.video-only-mode #camPiP { display: none !important; }
-  body.video-only-mode #progreso { display: none !important; }
 
   @media (min-width: 768px) {
     #videoStage { inset: 12px; border-radius: 20px; }
@@ -305,6 +335,7 @@
     .chip { padding: 3px 8px; font-size: 10px; }
     .gestos-grid { gap: 6px; }
     .gestos-grid > div { padding: 6px 8px; font-size: 10px; }
+    .gestos-grid .emoji { font-size: 17px; }
     #presetsGrid { grid-template-columns: repeat(3, 1fr); }
   }
 </style>
@@ -346,6 +377,7 @@
 
   <button class="btn-flotante" id="btnAyuda">?</button>
   <button class="btn-flotante" id="btnMute">🔇</button>
+  <button class="btn-flotante" id="btnFull">🔳</button>
   <button class="btn-flotante" id="btnRend">⚡</button>
 
   <div id="ayuda">
@@ -369,7 +401,7 @@
 
   <div id="inicio" class="pantalla">
     <h1>🤖 Control por Gestos (2 manos)</h1>
-    <p>Muestra el mismo gesto con AMBAS manos. Si va lento, abre ⚡ Rendimiento y elige "Ultra" o "Solo video".</p>
+    <p>Muestra el mismo gesto con AMBAS manos. Mantén la seña un instante para activarla. Ajusta el rendimiento si va lento en tu dispositivo.</p>
     <div id="estado">Pulsa Iniciar para comenzar</div>
     <button id="btnIniciar">Iniciar cámara</button>
     <button id="btnRend2" class="sec small">⚡ Rendimiento</button>
@@ -379,11 +411,9 @@
 
   <div id="rendimiento" class="pantalla oculto">
     <h1>⚡ Rendimiento</h1>
-    <p>Si va lento: baja a <b>Ultra</b> o <b>Solo video</b>.</p>
+    <p>Elige un preset rápido o ajusta manualmente.</p>
 
     <div id="presetsGrid">
-      <button data-preset="video_only">🎬 Solo video</button>
-      <button data-preset="ultra">🐢 Ultra</button>
       <button data-preset="minimo">Mínimo</button>
       <button data-preset="bajo">Bajo</button>
       <button data-preset="medio">Medio</button>
@@ -396,9 +426,7 @@
     <div id="rendPanel">
       <label>Resolución de procesamiento
         <select id="selResolucion">
-          <option value="64x48">64×48 · extremo</option>
-          <option value="96x72">96×72 · ultra</option>
-          <option value="128x96">128×96 · muy rápido</option>
+          <option value="128x96">128×96 · más rápido</option>
           <option value="160x120">160×120</option>
           <option value="192x144">192×144</option>
           <option value="256x192">256×192</option>
@@ -408,9 +436,7 @@
 
       <label>FPS máximo de detección
         <select id="selFps">
-          <option value="2">2 · extremo</option>
-          <option value="3">3</option>
-          <option value="5">5</option>
+          <option value="6">6 · mínimo</option>
           <option value="8">8</option>
           <option value="12">12</option>
           <option value="15">15</option>
@@ -450,11 +476,6 @@
           <option value="1200">1200 ms · muy estable</option>
         </select>
       </label>
-
-      <div class="checkbox-row">
-        <input type="checkbox" id="chkVideoOnly">
-        <label for="chkVideoOnly" style="flex-direction:row;color:#e8f6ff;font-size:12px;">🎬 Modo solo video (sin detección)</label>
-      </div>
 
       <div class="checkbox-row">
         <input type="checkbox" id="chkEfectos">
@@ -497,83 +518,49 @@ const COMANDOS = {
 };
 
 const PRESETS = {
-  video_only: {
+  minimo: {
     procW: 128, procH: 96,
     camWidth: 320, camHeight: 240,
-    maxFps: 30,
+    maxFps: 8,
     modelComplexity: 0,
     overlayQuality: 'off',
     reduceEffects: true,
     duracionEstableMs: 900,
-    minFramesEstables: 2,
-    canvasScale: 0.5,
-    imageSmoothing: false,
-    disableDetection: true
-  },
-  ultra: {
-    procW: 64, procH: 48,
-    camWidth: 320, camHeight: 240,
-    maxFps: 3,
-    modelComplexity: 0,
-    overlayQuality: 'off',
-    reduceEffects: true,
-    duracionEstableMs: 900,
-    minFramesEstables: 2,
-    canvasScale: 0.4,
-    imageSmoothing: false,
-    disableDetection: false
-  },
-  minimo: {
-    procW: 96, procH: 72,
-    camWidth: 320, camHeight: 240,
-    maxFps: 6,
-    modelComplexity: 0,
-    overlayQuality: 'off',
-    reduceEffects: true,
-    duracionEstableMs: 750,
-    minFramesEstables: 2,
-    canvasScale: 0.6,
-    imageSmoothing: false,
-    disableDetection: false
+    minFramesEstables: 3,
+    canvasScale: 0.6
   },
   bajo: {
-    procW: 128, procH: 96,
+    procW: 160, procH: 120,
     camWidth: 320, camHeight: 240,
-    maxFps: 10,
+    maxFps: 12,
     modelComplexity: 0,
     overlayQuality: 'low',
     reduceEffects: true,
-    duracionEstableMs: 700,
+    duracionEstableMs: 750,
     minFramesEstables: 3,
-    canvasScale: 0.8,
-    imageSmoothing: true,
-    disableDetection: false
+    canvasScale: 0.8
   },
   medio: {
     procW: 256, procH: 192,
     camWidth: 480, camHeight: 360,
-    maxFps: 15,
+    maxFps: 20,
     modelComplexity: 0,
     overlayQuality: 'full',
     reduceEffects: false,
     duracionEstableMs: 600,
     minFramesEstables: 3,
-    canvasScale: 1,
-    imageSmoothing: true,
-    disableDetection: false
+    canvasScale: 1
   },
   alto: {
     procW: 320, procH: 240,
     camWidth: 640, camHeight: 480,
-    maxFps: 24,
+    maxFps: 30,
     modelComplexity: 0,
     overlayQuality: 'full',
     reduceEffects: false,
     duracionEstableMs: 500,
     minFramesEstables: 4,
-    canvasScale: 1,
-    imageSmoothing: true,
-    disableDetection: false
+    canvasScale: 1
   }
 };
 
@@ -582,10 +569,10 @@ const CONFIG = {
   duracionEstableMs: 600,
   minFramesEstables: 3,
   cooldownMs: 1200,
-  framesReset: 6,
+  framesReset: 8,
   procW: 256, procH: 192,
   camWidth: 480, camHeight: 360,
-  maxFps: 15,
+  maxFps: 20,
   modelComplexity: 0,
   maxNumHands: 2,
   minDetectionConfidence: 0.6,
@@ -593,42 +580,40 @@ const CONFIG = {
   overlayQuality: 'full',
   reduceEffects: false,
   canvasScale: 1,
-  imageSmoothing: true,
-  disableDetection: false,
   mediapipeBase: 'https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240',
   camaraUrl: ''
 };
 
+/* Cargar config guardada */
 try {
-  const sc = localStorage.getItem('ia_gestos_config_v4');
+  const sc = localStorage.getItem('ia_gestos_config_v3');
   if (sc) {
     const o = JSON.parse(sc);
     Object.keys(o).forEach(k => { if (k in CONFIG) CONFIG[k] = o[k]; });
   }
 } catch(e) {}
 
-/* Preferencia del sistema: reducir motion */
-if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-  CONFIG.reduceEffects = true;
-}
-
+/* Detectar capacidad del dispositivo para preset inicial */
 function detectarCapacidad() {
-  const cores = navigator.hardwareConcurrency || 4;
-  const mem = navigator.deviceMemory || 4;
-  if (cores <= 2 || mem <= 1) return 'ultra';
-  if (cores <= 3 || mem <= 2) return 'minimo';
-  if (cores <= 4 || mem <= 4) return 'bajo';
-  return 'medio';
+  const cores = navigator.hardwareConcurrency || 2;
+  const mem = navigator.deviceMemory || 2;
+  if (cores <= 2 || mem <= 1) return 'minimo';
+  if (cores <= 4 || mem <= 2) return 'bajo';
+  if (cores <= 6 || mem <= 4) return 'medio';
+  return 'alto';
+}
+if (CONFIG.preset === 'auto') {
+  /* Primera vez: elegimos por hardware. Si después Auto detecta en runtime, se ajusta */
 }
 
 /* ═══════════════ ESTADO ═══════════════ */
 const estado = {
-  hands: null, corriendo: false, indiceVideo: 0,
-  gestoActual: null, gestoStartTime: 0, framesEstables: 0,
-  esperandoNeutro: false, comandoEjecutado: null,
-  framesSinManos: 0, ultimaAccion: 0, esFullscreen: false,
-  welcomeVisible: false, activeCam: null, enviandoFrame: false,
-  fpsSamples: [], lastInferenceTime: 0
+  hands:null, corriendo:false, indiceVideo:0,
+  gestoActual:null, gestoStartTime:0, framesEstables:0,
+  esperandoNeutro:false, comandoEjecutado:null,
+  framesSinManos:0, ultimaAccion:0, esFullscreen:false,
+  welcomeVisible:false, activeCam: null, enviandoFrame: false,
+  fpsSamples: []
 };
 
 const $ = id => document.getElementById(id);
@@ -636,11 +621,11 @@ const cam = $('cam');
 const camImg = $('camImg');
 const video = $('video');
 const canvas = $('overlay');
-const ctx = canvas.getContext('2d', { alpha: true, willReadFrequently: false });
+const ctx = canvas.getContext('2d', { alpha: true });
 const camPiP = $('camPiP');
 
 const procCanvas = document.createElement('canvas');
-const procCtx = procCanvas.getContext('2d', { alpha: false, willReadFrequently: true });
+const procCtx = procCanvas.getContext('2d', { alpha: false });
 
 function actualizarProcCanvas() {
   procCanvas.width = CONFIG.procW;
@@ -671,26 +656,24 @@ camPiP.addEventListener('transitionend', (e) => {
 /* ═══════════════ APLICAR PRESET / CONFIG ═══════════════ */
 function aplicarEfectos() {
   document.body.classList.toggle('reduce-effects', !!CONFIG.reduceEffects);
-  document.body.classList.toggle('ultra-mode', CONFIG.preset === 'ultra' || CONFIG.preset === 'video_only');
-  document.body.classList.toggle('video-only-mode', !!CONFIG.disableDetection || CONFIG.preset === 'video_only');
 }
 
 function aplicarPreset(nombre, silencioso) {
   if (nombre === 'auto') {
-    const det = detectarCapacidad();
-    const p = PRESETS[det];
-    Object.assign(CONFIG, p);
     CONFIG.preset = 'auto';
-    aplicarEfectos();
-    actualizarProcCanvas();
-    ajustarCanvas();
-    if (estado.hands) aplicarOpcionesHands();
     if (!silencioso) {
+      const det = detectarCapacidad();
+      const p = PRESETS[det];
+      Object.assign(CONFIG, p);
+      CONFIG.preset = 'auto';
+      aplicarEfectos();
+      actualizarProcCanvas();
+      ajustarCanvas();
       const info = $('rendInfo');
-      if (info) info.textContent = 'Auto: hardware → ' + det + '. Se ajustará con FPS reales.';
+      if (info) info.textContent = 'Auto: hardware detectado → ' + det + '. Se ajustará tras medir FPS reales.';
+      sincronizarUI();
+      guardarConfig();
     }
-    sincronizarUI();
-    guardarConfig();
     return;
   }
   const p = PRESETS[nombre];
@@ -700,7 +683,6 @@ function aplicarPreset(nombre, silencioso) {
   aplicarEfectos();
   actualizarProcCanvas();
   ajustarCanvas();
-  if (estado.hands) aplicarOpcionesHands();
   if (!silencioso) {
     const info = $('rendInfo');
     if (info) info.textContent = 'Preset "' + nombre + '" aplicado.';
@@ -709,20 +691,8 @@ function aplicarPreset(nombre, silencioso) {
   guardarConfig();
 }
 
-function aplicarOpcionesHands() {
-  if (!estado.hands) return;
-  try {
-    estado.hands.setOptions({
-      maxNumHands: CONFIG.maxNumHands,
-      modelComplexity: CONFIG.modelComplexity,
-      minDetectionConfidence: CONFIG.minDetectionConfidence,
-      minTrackingConfidence: CONFIG.minTrackingConfidence
-    });
-  } catch(e) { console.warn(e); }
-}
-
 function guardarConfig() {
-  try { localStorage.setItem('ia_gestos_config_v4', JSON.stringify(CONFIG)); } catch(e) {}
+  try { localStorage.setItem('ia_gestos_config_v3', JSON.stringify(CONFIG)); } catch(e) {}
 }
 
 /* ═══════════════ AUTO-MEDICIÓN ═══════════════ */
@@ -738,20 +708,16 @@ function iniciarAutoDeteccion() {
       clearInterval(autoTimer); autoTimer = null;
       const prom = estado.fpsSamples.reduce((a,b)=>a+b,0) / estado.fpsSamples.length;
       let elegido;
-      if (prom < 4) elegido = 'ultra';
-      else if (prom < 8) elegido = 'minimo';
-      else if (prom < 12) elegido = 'bajo';
-      else if (prom < 20) elegido = 'medio';
+      if (prom < 6) elegido = 'minimo';
+      else if (prom < 10) elegido = 'bajo';
+      else if (prom < 18) elegido = 'medio';
       else elegido = 'alto';
-      Object.assign(CONFIG, PRESETS[elegido]);
+      const mensaje = 'Auto: ' + Math.round(prom) + ' fps medidos → ajustado a "' + elegido + '".';
+      aplicarPreset(elegido, true);
       CONFIG.preset = 'auto';
-      aplicarEfectos();
-      actualizarProcCanvas();
-      ajustarCanvas();
-      aplicarOpcionesHands();
       guardarConfig();
       const info = $('rendInfo');
-      if (info) info.textContent = `Auto: ${Math.round(prom)} fps → ${elegido}.`;
+      if (info) info.textContent = mensaje;
     }
   }, 1000);
 }
@@ -772,14 +738,18 @@ function dist2D(a, b){ return Math.hypot(a.x-b.x, a.y-b.y); }
 function analizarMano(lm){
   const w = lm[0];
   const umbral = 1.12;
+
   const indice  = dist2D(lm[8],  w) > dist2D(lm[6],  w) * umbral;
   const medio   = dist2D(lm[12], w) > dist2D(lm[10], w) * umbral;
   const anular  = dist2D(lm[16], w) > dist2D(lm[14], w) * umbral;
   const menique = dist2D(lm[20], w) > dist2D(lm[18], w) * umbral;
   const pulgar  = dist2D(lm[4], lm[5]) > dist2D(lm[3], lm[5]) * 1.35;
+
   const pulgarArriba = pulgar && !indice && !medio && !anular && !menique
     && lm[4].y < lm[2].y - 0.02;
+
   if (pulgarArriba) return { patron: 'pulgar_arriba', dedos: 1 };
+
   const ext = [];
   if (indice)  ext.push('indice');
   if (medio)   ext.push('medio');
@@ -787,7 +757,11 @@ function analizarMano(lm){
   if (menique) ext.push('menique');
   if (pulgar)  ext.push('pulgar');
   ext.sort();
-  return { patron: ext.length === 0 ? 'nada' : ext.join('_'), dedos: ext.length };
+
+  return {
+    patron: ext.length === 0 ? 'nada' : ext.join('_'),
+    dedos: ext.length
+  };
 }
 
 /* ═══════════════ LÓGICA DE GESTOS (basada en TIEMPO) ═══════════════ */
@@ -837,12 +811,53 @@ function ejecutarComando(cmd){
   else if (cmd.tipo==='fullscreen') toggleFullscreen();
 }
 
-function toggleFullscreen(){
-  estado.esFullscreen = !estado.esFullscreen;
+async function toggleFullscreen(){
+  /* ¿Salir? Si está en fullscreen real O en modo teatro */
+  if (document.fullscreenElement || estado.esFullscreen) {
+    if (document.fullscreenElement) {
+      try { await document.exitFullscreen(); } catch(e){}
+    }
+    /* Si no estaba en fullscreen real (solo teatro), forzamos salida del teatro */
+    if (!document.fullscreenElement) {
+      estado.esFullscreen = false;
+      camPiP.classList.remove('fullscreen');
+      actualizarBotonFull();
+      setTimeout(ajustarCanvas, 380);
+    }
+    return;
+  }
+
+  /* Entrar */
+  try {
+    const el = document.documentElement;
+    if (el.requestFullscreen) await el.requestFullscreen({ navigationUI: 'hide' });
+    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    else throw new Error('API no disponible');
+  } catch (e) {
+    /* Fallback (iOS Safari, o gesto sin permiso): solo modo "teatro" del PiP */
+    console.warn('Pantalla completa no disponible:', e);
+    estado.esFullscreen = true;
+    camPiP.classList.add('fullscreen');
+    actualizarBotonFull();
+    setTimeout(ajustarCanvas, 380);
+  }
+}
+
+function actualizarBotonFull(){
+  const b = $('btnFull');
+  if (b) b.textContent = estado.esFullscreen ? '🔲' : '🔳';
+}
+
+function sincronizarFullscreen(){
+  estado.esFullscreen = !!document.fullscreenElement;
   camPiP.classList.toggle('fullscreen', estado.esFullscreen);
+  actualizarBotonFull();
   if (estado.esFullscreen) $('ayuda').classList.remove('visible');
   setTimeout(ajustarCanvas, 380);
 }
+
+document.addEventListener('fullscreenchange', sincronizarFullscreen);
+document.addEventListener('webkitfullscreenchange', sincronizarFullscreen);
 
 function mostrarBienvenida(){
   estado.welcomeVisible = true;
@@ -860,6 +875,10 @@ function cargarVideo(idx){
   const url = (VIDEOS[idx]||'').trim();
   if (!url){ mostrarMensaje('Video '+(idx+1)+' sin URL'); return; }
   estado.indiceVideo = idx;
+
+  $('videoStage').classList.add('loading');
+  setTimeout(() => $('videoStage').classList.remove('loading'), 700);
+
   video.src = url;
   video.currentTime = 0;
   video.muted = false;
@@ -870,6 +889,7 @@ function cargarVideo(idx){
       video.play().then(actualizarBotonMute)
         .catch(() => mostrarMensaje('No se pudo reproducir Video '+(idx+1)));
     });
+
   ocultarMensaje();
   $('videoActual').textContent = idx + 1;
 }
@@ -901,12 +921,14 @@ function rrect(x,y,w,h,r){
 
 function dibujarMano(lm,idx,esActiva,patron){
   if (CONFIG.overlayQuality === 'off') return;
+
   const color = COLORES[idx%COLORES.length];
   const pts = lm.map(proy);
   const gr = Math.max(1.5, Math.round(cw/180));
   const rad = Math.max(1.8, gr*1.4);
   const low = (CONFIG.overlayQuality === 'low');
 
+  /* Conexiones: solo en full */
   if (!low){
     ctx.lineCap='round'; ctx.lineJoin='round';
     ctx.strokeStyle=color; ctx.lineWidth=gr;
@@ -920,9 +942,11 @@ function dibujarMano(lm,idx,esActiva,patron){
     ctx.stroke();
   }
 
+  /* Puntos (siempre en low y full) */
   ctx.globalAlpha = esActiva ? 1 : 0.45;
   ctx.fillStyle = color;
   if (low){
+    /* En low: solo yema de los dedos + muñeca (5 puntos) */
     const idxs = [0, 8, 12, 16, 20];
     for (let k=0;k<idxs.length;k++){
       const p = pts[idxs[k]];
@@ -936,6 +960,7 @@ function dibujarMano(lm,idx,esActiva,patron){
     }
   }
 
+  /* Etiqueta solo en full */
   if (!low && cw > 120){
     let minY=Infinity, sx=0;
     for(const p of pts) if(p.y<minY){ minY=p.y; sx=p.x; }
@@ -954,6 +979,7 @@ function etiqueta(texto,x,y,color){
   const h = fs + pad*2;
   let bx = Math.max(2, Math.min(cw-w-2, x-w/2));
   let by = y-h-6; if (by<2) by = y+8;
+
   ctx.fillStyle = 'rgba(4,10,18,.85)';
   rrect(bx,by,w,h,5); ctx.fill();
   ctx.strokeStyle = color; ctx.lineWidth = 1;
@@ -962,10 +988,7 @@ function etiqueta(texto,x,y,color){
   ctx.fillText(texto, bx+pad, by+h/2);
 }
 
-/* ═══════════════ RESULTADOS ═══════════════ */
-const HUD_THROTTLE = 300;
-let lastHudUpdate = 0;
-
+/* ═══════════════ RESULTADOS MEDIAPIPE ═══════════════ */
 function onResults(res){
   framesFps++;
   const ahora = performance.now();
@@ -977,9 +1000,15 @@ function onResults(res){
 
   if (!cw || !ch) ajustarCanvas();
 
-  /* Overlay: dibujar solo si no está off */
+  /* Limpiar overlay (si está off igual limpiamos una vez) */
   if (CONFIG.overlayQuality !== 'off') {
     ctx.clearRect(0,0,cw,ch);
+  } else {
+    /* Solo limpiar si hay algo dibujado */
+    if (canvas._dirty) {
+      ctx.clearRect(0,0,cw,ch);
+      canvas._dirty = false;
+    }
   }
 
   const manos = res.multiHandLandmarks || [];
@@ -998,6 +1027,7 @@ function onResults(res){
     for (let i=0;i<manos.length;i++){
       dibujarMano(manos[i], i, coinciden, analisis[i].patron);
     }
+    if (manos.length) canvas._dirty = true;
   }
 
   if (manos.length < 2){
@@ -1008,11 +1038,8 @@ function onResults(res){
       estado.gestoActual = null;
       estado.framesEstables = 0;
     }
-    if (ahora - lastHudUpdate > HUD_THROTTLE) {
-      const txt = manos.length===1 ? '🙌 Falta 1 mano' : '—';
-      if (lastHudGesto !== txt) { $('gestoActual').textContent = txt; lastHudGesto = txt; }
-      lastHudUpdate = ahora;
-    }
+    const txt = manos.length===1 ? '🙌 Falta 1 mano' : '—';
+    if (lastHudGesto !== txt) { $('gestoActual').textContent = txt; lastHudGesto = txt; }
     camPiP.classList.remove('gesture-active');
     camPiP.classList.toggle('waiting', manos.length===0);
     actualizarProgreso(null, manos.length);
@@ -1022,13 +1049,10 @@ function onResults(res){
   camPiP.classList.remove('waiting');
 
   const cmd = patronCombinado ? COMANDOS[patronCombinado] : null;
-  if (ahora - lastHudUpdate > HUD_THROTTLE) {
-    const txtGesto = coinciden
-      ? (cmd ? cmd.nombre : '· '+patronCombinado)
-      : '❓ Gestos distintos';
-    if (lastHudGesto !== txtGesto) { $('gestoActual').textContent = txtGesto; lastHudGesto = txtGesto; }
-    lastHudUpdate = ahora;
-  }
+  const txtGesto = coinciden
+    ? (cmd ? cmd.nombre : '· '+patronCombinado)
+    : '❓ Gestos distintos';
+  if (lastHudGesto !== txtGesto) { $('gestoActual').textContent = txtGesto; lastHudGesto = txtGesto; }
 
   const estable = coinciden && cmd && estado.framesEstables >= 2 && !estado.esperandoNeutro;
   if (estable) camPiP.classList.add('gesture-active');
@@ -1041,8 +1065,7 @@ function onResults(res){
 let lastProgressUpdate = 0;
 function actualizarProgreso(patron, numManos){
   const ahora = performance.now();
-  const throttle = (CONFIG.preset === 'ultra') ? 300 : 100;
-  if (ahora-lastProgressUpdate < throttle) return;
+  if (ahora-lastProgressUpdate < 80) return;
   lastProgressUpdate = ahora;
   const box = $('progreso');
 
@@ -1084,53 +1107,31 @@ function cargarMediaPipe(){
   return handsPromise;
 }
 
-/* ═══════════════ BUCLE PRINCIPAL (SETTIMEOUT + YIELD) ═══════════════
-   Clave: usamos setTimeout en vez de requestAnimationFrame y cedemos
-   tiempo al navegador entre inferencias. En un netbook, cada inferencia
-   bloquea el hilo 300-500ms. Sin este yield, el navegador se congela.
-   Con yield proporcional, el video y la UI siguen fluidos.
-*/
-async function bucle() {
+/* ═══════════════ BUCLE PRINCIPAL (con límite de FPS) ═══════════════ */
+async function bucle(){
   if (!estado.corriendo) return;
 
-  /* Modo solo video: no procesar nada */
-  if (CONFIG.disableDetection) {
-    setTimeout(bucle, 500);
-    return;
-  }
-
-  const minInterval = 1000 / Math.max(1, CONFIG.maxFps);
   const ahora = performance.now();
-  const canSend = estado.activeCam && estado.hands && !estado.enviandoFrame
-                  && (ahora - lastSend) >= minInterval;
+  const minInterval = 1000 / Math.max(1, CONFIG.maxFps);
 
-  if (!canSend) {
-    setTimeout(bucle, 16);
+  if (estado.enviandoFrame || (ahora - lastSend) < minInterval){
+    requestAnimationFrame(bucle);
     return;
   }
 
-  lastSend = ahora;
-  estado.enviandoFrame = true;
-  const t0 = performance.now();
-  let inferTime = 0;
-
-  try {
-    procCtx.imageSmoothingEnabled = CONFIG.imageSmoothing !== false;
-    procCtx.drawImage(estado.activeCam, 0, 0, CONFIG.procW, CONFIG.procH);
-    await estado.hands.send({ image: procCanvas });
-  } catch(e) {
-    /* silencioso */
-  } finally {
-    estado.enviandoFrame = false;
-    inferTime = performance.now() - t0;
-    estado.lastInferenceTime = inferTime;
+  if (estado.activeCam && estado.hands){
+    lastSend = ahora;
+    estado.enviandoFrame = true;
+    try {
+      procCtx.drawImage(estado.activeCam, 0, 0, CONFIG.procW, CONFIG.procH);
+      await estado.hands.send({ image: procCanvas });
+    } catch(e){
+    } finally {
+      estado.enviandoFrame = false;
+    }
   }
 
-  /* Yield: dar al navegador al menos tanto como tardó la inferencia.
-     Y respetar el intervalo objetivo (maxFps).
-     Si la inferencia es más lenta que el intervalo, cedemos solo inferTime. */
-  const waitTime = Math.max(16, inferTime, minInterval - inferTime);
-  setTimeout(bucle, waitTime);
+  if (estado.corriendo) requestAnimationFrame(bucle);
 }
 
 /* ═══════════════ INICIO ═══════════════ */
@@ -1150,18 +1151,24 @@ async function iniciar(){
       cam.style.display = 'none';
       camImg.style.display = 'block';
       camImg.src = CONFIG.camaraUrl;
+
       await new Promise((resolve, reject) => {
         camImg.onload = resolve;
         camImg.onerror = () => reject(new Error('Error al cargar el stream. Revisa que la URL sea HTTP y termine en /video'));
         setTimeout(() => reject(new Error('Timeout: la cámara externa no responde.')), 10000);
       });
+
       estado.activeCam = camImg;
     } else {
       setEstado('2/4 · Solicitando cámara...');
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
         throw new Error('Tu navegador no soporta cámara. Necesitas HTTPS o localhost.');
       }
-      if (cam.srcObject) cam.srcObject.getTracks().forEach(t => t.stop());
+
+      if (cam.srcObject){
+        cam.srcObject.getTracks().forEach(t => t.stop());
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           width: { ideal: CONFIG.camWidth },
@@ -1171,6 +1178,7 @@ async function iniciar(){
         audio: false
       });
       cam.srcObject = stream;
+
       await new Promise((resolve) => {
         if (cam.readyState >= 2) return resolve();
         cam.onloadeddata = resolve;
@@ -1192,7 +1200,12 @@ async function iniciar(){
 
     setEstado('3/4 · Iniciando detector...');
     estado.hands = new Hands({ locateFile: f => CONFIG.mediapipeBase + '/' + f });
-    aplicarOpcionesHands();
+    estado.hands.setOptions({
+      maxNumHands: CONFIG.maxNumHands,
+      modelComplexity: CONFIG.modelComplexity,
+      minDetectionConfidence: CONFIG.minDetectionConfidence,
+      minTrackingConfidence: CONFIG.minTrackingConfidence
+    });
     estado.hands.onResults(onResults);
 
     setEstado('4/4 · Calibrando...');
@@ -1205,6 +1218,7 @@ async function iniciar(){
     mostrarBienvenida();
     bucle();
 
+    /* Auto preset: medir FPS reales */
     iniciarAutoDeteccion();
 
   } catch(e){
@@ -1217,14 +1231,10 @@ async function iniciar(){
 
 $('btnIniciar').addEventListener('click', iniciar);
 
-/* ═══════════════ SINCRONIZAR UI ═══════════════ */
+/* ═══════════════ APLICAR CAMBIOS DE RENDIMIENTO ═══════════════ */
 function sincronizarUI(){
   const el = document.getElementById('selResolucion');
-  if (el) {
-    const key = CONFIG.procW + 'x' + CONFIG.procH;
-    el.value = key;
-    if (el.value !== key) el.selectedIndex = 0;
-  }
+  if (el) el.value = CONFIG.procW + 'x' + CONFIG.procH;
   const f = document.getElementById('selFps');
   if (f) f.value = String(CONFIG.maxFps);
   const ov = document.getElementById('selOverlay');
@@ -1237,8 +1247,6 @@ function sincronizarUI(){
   if (ti) ti.value = String(CONFIG.duracionEstableMs);
   const ef = document.getElementById('chkEfectos');
   if (ef) ef.checked = !!CONFIG.reduceEffects;
-  const vo = document.getElementById('chkVideoOnly');
-  if (vo) vo.checked = !!CONFIG.disableDetection;
 
   document.querySelectorAll('#presetsGrid button').forEach(b => {
     b.classList.toggle('activo', b.dataset.preset === CONFIG.preset);
@@ -1249,29 +1257,45 @@ function leerUIRendimiento(){
   const res = $('selResolucion').value.split('x');
   CONFIG.procW = parseInt(res[0], 10);
   CONFIG.procH = parseInt(res[1], 10);
+
   CONFIG.maxFps = parseInt($('selFps').value, 10);
   CONFIG.overlayQuality = $('selOverlay').value;
   CONFIG.modelComplexity = parseInt($('selModelo').value, 10);
+
   const camRes = $('selCam').value.split('x');
   const nuevoCamW = parseInt(camRes[0], 10);
   const nuevoCamH = parseInt(camRes[1], 10);
   const camCambio = (nuevoCamW !== CONFIG.camWidth || nuevoCamH !== CONFIG.camHeight);
   CONFIG.camWidth = nuevoCamW;
   CONFIG.camHeight = nuevoCamH;
+
   CONFIG.duracionEstableMs = parseInt($('selTiempo').value, 10);
   CONFIG.reduceEffects = $('chkEfectos').checked;
-  CONFIG.disableDetection = $('chkVideoOnly').checked;
-  CONFIG.preset = 'custom';
 
+  /* Aplicar */
+  CONFIG.preset = 'custom';
   actualizarProcCanvas();
   aplicarEfectos();
   ajustarCanvas();
-  aplicarOpcionesHands();
   guardarConfig();
 
+  /* Actualizar Hands si está corriendo */
+  if (estado.hands){
+    try {
+      estado.hands.setOptions({
+        maxNumHands: CONFIG.maxNumHands,
+        modelComplexity: CONFIG.modelComplexity,
+        minDetectionConfidence: CONFIG.minDetectionConfidence,
+        minTrackingConfidence: CONFIG.minTrackingConfidence
+      });
+    } catch(e){ console.warn(e); }
+  }
+
+  /* Si cambió la resolución de cámara y está corriendo, reiniciar cámara */
   if (camCambio && estado.corriendo && estado.activeCam === cam){
     reiniciarCamaraSolo();
   }
+
   sincronizarUI();
 }
 
@@ -1316,7 +1340,9 @@ document.querySelectorAll('#presetsGrid button').forEach(b => {
   b.addEventListener('click', () => {
     const p = b.dataset.preset;
     aplicarPreset(p);
-    if (p === 'auto') iniciarAutoDeteccion();
+    if (p === 'auto'){
+      iniciarAutoDeteccion();
+    }
     document.querySelectorAll('#presetsGrid button').forEach(x => {
       x.classList.toggle('activo', x.dataset.preset === p);
     });
@@ -1331,12 +1357,13 @@ $('btnAplicarRend').addEventListener('click', ()=>{
 
 $('btnCerrarRend').addEventListener('click', ()=>{
   $('rendimiento').classList.add('oculto');
+  /* Si nunca arrancó, volver a inicio */
   if (!estado.corriendo && $('inicio').classList.contains('oculto') && $('config').classList.contains('oculto')) {
     $('inicio').classList.remove('oculto');
   }
 });
 
-/* ═══════════════ CONFIG ═══════════════ */
+/* ═══════════════ CONFIG (videos + cámara) ═══════════════ */
 $('btnConfig').addEventListener('click', ()=>{
   construirPanelConfig();
   $('inicio').classList.add('oculto');
@@ -1348,9 +1375,11 @@ $('btnGuardar').addEventListener('click', ()=>{
   for(let i=0;i<5;i++) urls.push(($('url'+i).value||'').trim());
   VIDEOS = urls;
   try { localStorage.setItem('ia_gestos_videos', JSON.stringify(urls)); } catch(e){}
+
   const camUrl = ($('camUrl').value||'').trim();
   CONFIG.camaraUrl = camUrl;
   guardarConfig();
+
   $('config').classList.add('oculto');
   $('inicio').classList.remove('oculto');
 });
@@ -1368,6 +1397,8 @@ $('btnMute').addEventListener('click', ()=>{
   video.muted = !video.muted;
   actualizarBotonMute();
 });
+
+$('btnFull').addEventListener('click', toggleFullscreen);
 
 function actualizarBotonMute(){
   $('btnMute').textContent = video.muted ? '🔇' : '🔊';
@@ -1418,15 +1449,10 @@ function construirPanelConfig(){
 }
 
 /* ═══════════════ ARRANQUE ═══════════════ */
-/* Aplicar preset inicial si es la primera vez o si está en 'auto' */
-if (!CONFIG.preset || CONFIG.preset === 'auto') {
-  aplicarPreset('auto', true);
-} else {
-  aplicarEfectos();
-  actualizarProcCanvas();
-  ajustarCanvas();
-}
+aplicarEfectos();
+ajustarCanvas();
 sincronizarUI();
+actualizarBotonFull();
 setEstado('Listo para iniciar');
 </script>
 </body>
