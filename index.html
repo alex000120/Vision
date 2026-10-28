@@ -4,237 +4,997 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="theme-color" content="#05070d">
-<title>Control por Gestos · IA Holográfica</title>
+<title>IA Holográfica · Control por Gestos</title>
 <style>
-  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; margin:0; padding:0; }
-  html,body{ height:100%; overflow:hidden; }
-  body{ background:#05070d; color:#e8f6ff; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }
-  #app{ position:fixed; inset:0; display:flex; flex-direction:column; }
+  :root {
+    --verde: #38ffb0;
+    --cian: #00d1ff;
+    --panel: rgba(6,14,24,.85);
+    --pip-size: clamp(110px, 26vw, 240px);
+    --pip-size-fs: clamp(80px, 14vw, 140px);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
+  html, body { height: 100%; height: 100dvh; overflow: hidden; }
+  body {
+    background: radial-gradient(circle at 50% 30%, #0a1420 0%, #05070d 70%);
+    color: #e8f6ff;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
 
-  #reproductor{ flex:0 0 45%; background:#000; position:relative; overflow:hidden;
-    display:flex; align-items:center; justify-content:center; }
-  #video{ width:100%; height:100%; object-fit:contain; }
-  #mensajeVideo{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-    color:#5a8ba8; font-size:13px; text-align:center; padding:20px; background:#000; }
-  #mensajeVideo.oculto{ display:none; }
+  #app { position: fixed; inset: 0; display: flex; flex-direction: column; }
 
-  #camZone{ flex:1; position:relative; overflow:hidden; background:#000; }
-  #cam{ position:absolute; inset:0; width:100%; height:100%;
-    object-fit:cover; transform:scaleX(-1); }
-  #overlay{ position:absolute; inset:0; width:100%; height:100%; }
+  /* ═══ VIDEO STAGE ═══ */
+  #videoStage {
+    position: absolute; inset: 4px;
+    border-radius: 14px; overflow: hidden;
+    background: #000;
+    box-shadow: 0 0 40px rgba(56,255,176,.12), inset 0 0 40px rgba(0,0,0,.5);
+  }
+  #videoStage.loading { animation: videoFlash .7s ease-out; }
+  @keyframes videoFlash {
+    0% { box-shadow: 0 0 60px rgba(56,255,176,.6), inset 0 0 60px rgba(56,255,176,.2); }
+    100% { box-shadow: 0 0 40px rgba(56,255,176,.12), inset 0 0 40px rgba(0,0,0,.5); }
+  }
+  #video { width: 100%; height: 100%; object-fit: contain; display: block; }
+  #mensajeVideo {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    color: #5a8ba8; font-size: 13px; text-align: center; padding: 20px;
+    background: #000; z-index: 3;
+  }
+  #mensajeVideo.oculto { display: none; }
 
-  #hud{ position:absolute; top:6px; left:6px; right:6px; display:flex;
-    gap:5px; flex-wrap:wrap; z-index:5; pointer-events:none; font-size:11px; }
-  .chip{ background:rgba(6,14,24,.78); border:1px solid rgba(56,255,176,.35);
-    border-radius:999px; padding:3px 9px; backdrop-filter:blur(6px); }
-  .chip b{ color:#38ffb0; }
+  #videoStage::after {
+    content: '';
+    position: absolute; bottom: 8px; left: 8px;
+    width: 44px; height: 44px;
+    border-left: 2px solid rgba(56,255,176,.5);
+    border-bottom: 2px solid rgba(56,255,176,.5);
+    border-bottom-left-radius: 10px;
+    pointer-events: none; z-index: 4; opacity: .6;
+  }
 
-  #progreso{ position:absolute; bottom:8px; left:8px; right:8px;
-    background:rgba(6,14,24,.85); border-radius:8px; padding:6px 10px;
-    font-size:12px; z-index:5; display:none; }
-  #progreso.visible{ display:block; }
-  #progresoTexto{ color:#e8f6ff; font-weight:600; }
-  #progresoBarra{ height:5px; background:#1a2f45; border-radius:3px;
-    overflow:hidden; margin-top:5px; }
-  #progresoFill{ height:100%; background:#38ffb0; width:0%; transition:width .08s linear; }
+  /* ═══ WELCOME ═══ */
+  #welcome {
+    position: absolute; inset: 0;
+    background: rgba(3,6,12,.94);
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 14px; padding: 24px;
+    z-index: 8; text-align: center; overflow: hidden;
+  }
+  #welcome.oculto { display: none; }
 
-  .pantalla{ position:absolute; inset:0; background:rgba(3,6,12,.96);
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    gap:14px; padding:24px; text-align:center; z-index:20; }
-  .pantalla.oculto{ display:none; }
-  .pantalla h1{ font-size:18px; font-weight:600; }
-  .pantalla p{ font-size:12px; color:#8fb4c9; max-width:340px; line-height:1.5; }
-  .pantalla button{ background:#38ffb0; color:#04140d; border:0;
-    border-radius:999px; padding:12px 28px; font-size:14px; font-weight:700;
-    cursor:pointer; min-width:200px; }
-  .pantalla button:disabled{ opacity:.5; }
-  .pantalla button.sec{ background:transparent; color:#38ffb0; border:1.5px solid #38ffb0; }
-  #estado{ font-size:12px; color:#38ffb0; min-height:16px; }
-  #error{ color:#ff7b7b; font-size:12px; max-width:340px; line-height:1.4; }
+  #welcome::before {
+    content: '';
+    position: absolute; inset: -64px;
+    background-image:
+      linear-gradient(rgba(56,255,176,.07) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(56,255,176,.07) 1px, transparent 1px);
+    background-size: 32px 32px;
+    animation: gridMove 18s linear infinite;
+    will-change: transform;
+    pointer-events: none;
+    opacity: .55;
+  }
+  @keyframes gridMove {
+    0% { transform: translate(0, 0); }
+    100% { transform: translate(32px, 32px); }
+  }
 
-  #configPanel{ width:100%; max-width:400px; display:flex; flex-direction:column;
-    gap:8px; max-height:60vh; overflow-y:auto; }
-  #configPanel label{ display:flex; flex-direction:column; gap:3px;
-    font-size:11px; color:#8fb4c9; text-align:left; }
-  #configPanel input{ background:#0a1420; border:1px solid #1e344a; color:#e8f6ff;
-    padding:8px 10px; border-radius:6px; font-size:12px; }
+  #welcome::after {
+    content: '';
+    position: absolute; left: 0; right: 0; top: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--verde), transparent);
+    box-shadow: 0 0 24px var(--verde);
+    animation: welcomeScan 2.2s ease-in-out forwards;
+    pointer-events: none;
+  }
+  @keyframes welcomeScan {
+    0% { top: 0; opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { top: 100%; opacity: 0; }
+  }
 
-  #ayuda{ position:absolute; top:38px; left:6px; background:rgba(6,14,24,.85);
-    border-radius:8px; padding:6px 10px; font-size:10px; line-height:1.6;
-    color:#8fb4c9; z-index:4; pointer-events:none; display:none; }
-  #ayuda.visible{ display:block; }
-  #ayuda b{ color:#38ffb0; }
+  #welcome .boot {
+    position: relative; z-index: 1;
+    display: inline-block;
+    font-family: 'Courier New', monospace;
+    font-size: 11px; letter-spacing: 3px;
+    color: var(--verde); padding-right: 2px;
+    border-right: 2px solid var(--verde);
+    white-space: nowrap; clip-path: inset(0 100% 0 0);
+    animation: reveal 1.4s steps(16) .2s forwards, blink 1s step-end infinite .2s;
+  }
+  @keyframes reveal { to { clip-path: inset(0 0 0 0); } }
+  @keyframes blink { 50% { border-color: transparent; } }
 
-  #btnAyuda, #btnMute{ position:absolute; bottom:8px; width:36px; height:36px;
-    border-radius:50%; background:rgba(6,14,24,.85);
-    border:1px solid rgba(56,255,176,.5); color:#38ffb0; font-size:14px;
-    z-index:10; cursor:pointer; display:flex; align-items:center; justify-content:center; }
-  #btnAyuda{ right:8px; font-weight:700; font-size:16px; }
-  #btnMute{ right:52px; }
+  #welcome h1 {
+    position: relative; z-index: 1;
+    font-size: clamp(20px, 5.2vw, 32px);
+    font-weight: 700; line-height: 1.2;
+    background: linear-gradient(135deg, var(--verde), var(--cian));
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent; margin: 0;
+  }
+  #welcome h1 span { font-style: italic; }
+  #welcome .sub { position: relative; z-index: 1; color: #8fb4c9; font-size: 12px; }
+
+  .gestos-grid {
+    position: relative; z-index: 1;
+    display: grid; grid-template-columns: repeat(2, 1fr);
+    gap: 8px; max-width: 400px; width: 100%; margin-top: 10px;
+  }
+  .gestos-grid > div {
+    background: rgba(6,14,24,.8);
+    border: 1px solid rgba(56,255,176,.25);
+    border-radius: 10px; padding: 8px 10px;
+    font-size: 11px; display: flex; align-items: center; gap: 8px;
+    cursor: pointer; transition: background .2s, border-color .2s, transform .1s;
+    text-align: left;
+  }
+  .gestos-grid > div:active { background: rgba(56,255,176,.15); border-color: var(--verde); transform: scale(.97); }
+  .gestos-grid .emoji { font-size: 20px; flex-shrink: 0; filter: drop-shadow(0 0 6px rgba(56,255,176,.3)); }
+  .gestos-grid .label { color: #e8f6ff; font-weight: 600; font-size: 11px; }
+  .gestos-grid .hint { color: #5a8ba8; font-size: 10px; display: block; margin-top: 1px; }
+
+  /* ═══ HUD ═══ */
+  #hud {
+    position: absolute; top: 12px; left: 12px;
+    display: flex; gap: 6px; flex-wrap: wrap; max-width: calc(100% - 180px);
+    z-index: 15; pointer-events: none; font-size: 11px;
+  }
+  .chip {
+    background: var(--panel); border: 1px solid rgba(56,255,176,.35);
+    border-radius: 999px; padding: 4px 10px;
+  }
+  .chip b { color: var(--verde); font-weight: 700; }
+
+  /* ═══ PROGRESO ═══ */
+  #progreso {
+    position: absolute; top: 48px; left: 50%; transform: translateX(-50%);
+    min-width: 190px; max-width: 85vw; background: var(--panel);
+    border: 1px solid rgba(56,255,176,.4); border-radius: 10px; padding: 6px 12px;
+    font-size: 11px; z-index: 15; display: none;
+    box-shadow: 0 0 24px rgba(56,255,176,.25);
+  }
+  #progreso.visible { display: block; }
+  #progresoTexto { color: #e8f6ff; font-weight: 600; margin-bottom: 4px; }
+  #progresoBarra { height: 4px; background: #1a2f45; border-radius: 3px; overflow: hidden; }
+  #progresoFill {
+    height: 100%; background: linear-gradient(90deg, var(--verde), var(--cian));
+    width: 0%; transition: width .08s linear; box-shadow: 0 0 8px rgba(56,255,176,.7);
+  }
+
+  /* ═══ CAM PiP ═══ */
+  #camPiP {
+    position: absolute; right: 12px; bottom: 12px;
+    width: var(--pip-size); aspect-ratio: 4/3;
+    border-radius: 14px; overflow: hidden;
+    border: 2px solid rgba(56,255,176,.6);
+    background: #000; z-index: 10;
+    box-shadow: 0 0 20px rgba(56,255,176,.35), 0 4px 16px rgba(0,0,0,.7);
+    transition: width .35s cubic-bezier(.4,0,.2,1), opacity .35s ease, border-color .35s ease, box-shadow .35s ease;
+  }
+  #camPiP.fullscreen {
+    width: var(--pip-size-fs); opacity: .6;
+    border-color: rgba(56,255,176,.25);
+    box-shadow: 0 0 12px rgba(56,255,176,.15), 0 4px 16px rgba(0,0,0,.5);
+  }
+  #camPiP.fullscreen:active { opacity: 1; }
+  #camPiP.gesture-active {
+    border-color: var(--verde);
+    box-shadow: 0 0 30px rgba(56,255,176,.7), 0 0 60px rgba(56,255,176,.35), 0 4px 16px rgba(0,0,0,.7);
+  }
+  #camPiP.waiting:not(.fullscreen)::before {
+    content: ''; position: absolute; inset: -4px;
+    border: 2px solid var(--verde); border-radius: 18px;
+    animation: pulseRing 2s ease-out infinite;
+    pointer-events: none; will-change: transform, opacity;
+  }
+  @keyframes pulseRing { 0% { transform: scale(1); opacity: .8; } 100% { transform: scale(1.22); opacity: 0; } }
+
+  #cam, #camImg {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: cover; z-index: 1;
+    backface-visibility: hidden;
+    transform: scaleX(-1);
+  }
+  #camImg { display: none; }
+  
+  #overlay {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    pointer-events: none; z-index: 2;
+  }
+
+  #camPiP::after {
+    content: ''; position: absolute; left: 0; right: 0; top: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(56,255,176,.5), transparent);
+    box-shadow: 0 0 6px rgba(56,255,176,.4);
+    animation: scanLine 4s linear infinite;
+    pointer-events: none; z-index: 5; opacity: .5;
+  }
+  @keyframes scanLine {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(calc(var(--pip-size) * 0.75)); }
+  }
+
+  /* ═══ BOTONES FLOTANTES ═══ */
+  .btn-flotante {
+    position: absolute; width: 38px; height: 38px;
+    border-radius: 50%; background: var(--panel);
+    border: 1px solid rgba(56,255,176,.5); color: var(--verde); font-size: 16px; z-index: 15;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 12px rgba(56,255,176,.2);
+  }
+  .btn-flotante:active { transform: scale(.92); box-shadow: 0 0 20px rgba(56,255,176,.5); }
+  #btnAyuda { right: 12px; top: 12px; font-size: 18px; font-weight: 700; }
+  #btnMute { right: 58px; top: 12px; }
+  #btnFull { right: 104px; top: 12px; font-size: 17px; }
+  #btnRend { left: 12px; bottom: 12px; font-size: 18px; }
+
+  /* ═══ AYUDA ═══ */
+  #ayuda {
+    position: absolute; top: 60px; right: 12px; background: var(--panel);
+    border: 1px solid rgba(56,255,176,.3); border-radius: 12px; padding: 10px 14px;
+    font-size: 11px; line-height: 1.7; color: #8fb4c9; z-index: 14; display: none; max-width: 240px;
+  }
+  #ayuda.visible { display: block; }
+  #ayuda b { color: var(--verde); }
+  #ayuda .titulo { color: var(--verde); font-weight: 700; margin-bottom: 6px; font-size: 12px; }
+
+  /* ═══ PANTALLAS ═══ */
+  .pantalla {
+    position: absolute; inset: 0; background: rgba(3,6,12,.96);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 14px; padding: 24px; text-align: center; z-index: 20;
+    overflow-y: auto;
+  }
+  .pantalla.oculto { display: none; }
+  .pantalla h1 { font-size: 20px; font-weight: 600; }
+  .pantalla p { font-size: 12px; color: #8fb4c9; max-width: 340px; line-height: 1.5; }
+  .pantalla button {
+    background: linear-gradient(135deg, var(--verde), var(--cian));
+    color: #04140d; border: 0; border-radius: 999px;
+    padding: 13px 30px; font-size: 14px; font-weight: 700; cursor: pointer; min-width: 200px;
+    box-shadow: 0 4px 20px rgba(56,255,176,.3);
+  }
+  .pantalla button:disabled { opacity: .5; }
+  .pantalla button.sec { background: transparent; color: var(--verde); border: 1.5px solid var(--verde); box-shadow: none; }
+  .pantalla button.small { padding: 9px 20px; font-size: 12px; min-width: 0; }
+  #estado { font-size: 12px; color: var(--verde); min-height: 16px; }
+  #error { color: #ff7b7b; font-size: 12px; max-width: 340px; line-height: 1.4; }
+
+  #configPanel, #rendPanel {
+    width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 8px;
+    max-height: 60vh; overflow-y: auto; padding: 4px;
+  }
+  #configPanel label, #rendPanel label { display: flex; flex-direction: column; gap: 3px; font-size: 11px; color: #8fb4c9; text-align: left; }
+  #configPanel input, #rendPanel select {
+    background: #0a1420; border: 1px solid #1e344a; color: #e8f6ff;
+    padding: 9px 11px; border-radius: 8px; font-size: 12px; transition: border-color .2s;
+    font-family: inherit;
+  }
+  #configPanel input:focus, #rendPanel select:focus { outline: none; border-color: var(--verde); box-shadow: 0 0 0 2px rgba(56,255,176,.15); }
+  #configPanel .hint { font-size: 10px; color: #5a8ba8; text-align: left; margin-top: -4px; line-height: 1.4; }
+
+  #rendPanel .checkbox-row {
+    display: flex; flex-direction: row; align-items: center; gap: 8px;
+    background: #0a1420; border: 1px solid #1e344a; border-radius: 8px; padding: 9px 11px;
+  }
+  #rendPanel .checkbox-row input[type=checkbox] {
+    width: 16px; height: 16px; padding: 0; accent-color: var(--verde);
+  }
+
+  #presetsGrid {
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px;
+    width: 100%; max-width: 400px;
+  }
+  #presetsGrid button {
+    padding: 10px 4px; font-size: 11px; min-width: 0;
+    background: rgba(6,14,24,.85); border: 1px solid rgba(56,255,176,.3);
+    color: #e8f6ff; border-radius: 8px; cursor: pointer; font-weight: 600;
+    box-shadow: none;
+  }
+  #presetsGrid button.activo {
+    background: linear-gradient(135deg, var(--verde), var(--cian));
+    color: #04140d; border-color: transparent;
+  }
+  #presetsGrid button:active { transform: scale(.96); }
+
+  #rendInfo {
+    font-size: 11px; color: #5a8ba8; max-width: 400px; text-align: center;
+    min-height: 14px; line-height: 1.4;
+  }
+
+  /* ═══ REDUCIR EFECTOS ═══ */
+  body.reduce-effects #camPiP::after,
+  body.reduce-effects #welcome::before,
+  body.reduce-effects #camPiP.waiting:not(.fullscreen)::before,
+  body.reduce-effects #videoStage.loading,
+  body.reduce-effects #welcome .boot {
+    animation: none !important;
+  }
+  body.reduce-effects #welcome::after,
+  body.reduce-effects #videoStage::after {
+    display: none !important;
+  }
+  body.reduce-effects #progresoFill { transition: none; }
+
+  /* ═══ CIERRE: CORAZÓN HOLOGRÁFICO ═══ */
+  #celebracion {
+    position: fixed; inset: 0;
+    background: radial-gradient(circle at 50% 50%, rgba(56,255,176,.18) 0%, rgba(3,6,12,.97) 65%);
+    z-index: 100;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 0;
+    animation: celebFadeIn .55s ease-out;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    cursor: pointer;
+  }
+  #celebracion.oculto { display: none; }
+  @keyframes celebFadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  .holo-glow {
+    position: absolute;
+    width: 70vmin; height: 70vmin;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(56,255,176,.32) 0%, rgba(0,209,255,.12) 40%, transparent 70%);
+    animation: holoPulse 2.6s ease-in-out infinite;
+    pointer-events: none;
+    will-change: transform, opacity;
+  }
+  @keyframes holoPulse {
+    0%, 100% { transform: scale(1); opacity: .75; }
+    50%      { transform: scale(1.18); opacity: 1; }
+  }
+
+  .corazon-holo {
+    width: clamp(190px, 46vw, 340px);
+    height: clamp(190px, 46vw, 340px);
+    position: relative; z-index: 1;
+    animation: latido 1.4s ease-in-out infinite .9s;
+    will-change: transform;
+  }
+  .trazo-corazon {
+    stroke-dasharray: 320;
+    stroke-dashoffset: 320;
+    animation: trazarCorazon 1.9s ease-out forwards;
+  }
+  @keyframes trazarCorazon {
+    0%   { stroke-dashoffset: 320; opacity: 0; }
+    10%  { opacity: 1; }
+    100% { stroke-dashoffset: 0; opacity: 1; }
+  }
+  @keyframes latido {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.06); }
+  }
+
+  .texto-celebracion {
+    margin-top: 20px; text-align: center;
+    font-size: clamp(16px, 4.2vw, 26px);
+    font-weight: 700; line-height: 1.25;
+    position: relative; z-index: 1;
+    padding: 0 24px;
+    letter-spacing: .3px;
+  }
+  .texto-celebracion .linea-1,
+  .texto-celebracion .linea-2 {
+    background: linear-gradient(135deg, #38ffb0, #00d1ff 60%, #ff4d9d);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+    opacity: 0;
+    animation: fadeUp .85s cubic-bezier(.2,.7,.2,1) forwards;
+  }
+  .texto-celebracion .linea-1 { animation-delay: 1.7s; }
+  .texto-celebracion .linea-2 { animation-delay: 2.15s; font-size: 1.18em; margin-top: 4px; }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(22px); filter: blur(4px); }
+    to   { opacity: 1; transform: translateY(0);    filter: blur(0); }
+  }
+
+  .sparkles { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+  .sparkles span {
+    position: absolute;
+    font-size: clamp(16px, 3vw, 24px);
+    opacity: 0;
+    animation: brillar 2.8s ease-in-out infinite;
+    will-change: transform, opacity;
+  }
+  .sparkles span:nth-child(1) { top: 15%; left: 20%; animation-delay: .4s; }
+  .sparkles span:nth-child(2) { top: 26%; right: 22%; animation-delay: .9s; }
+  .sparkles span:nth-child(3) { bottom: 25%; left: 18%; animation-delay: 1.4s; }
+  .sparkles span:nth-child(4) { bottom: 16%; right: 24%; animation-delay: 1.9s; }
+  .sparkles span:nth-child(5) { top: 46%; right: 10%; animation-delay: .6s; }
+  @keyframes brillar {
+    0%, 100% { opacity: 0; transform: scale(.4) rotate(0deg); }
+    50%      { opacity: 1; transform: scale(1.15) rotate(180deg); }
+  }
+
+  .tap-cerrar {
+    position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
+    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    color: #5a8ba8; opacity: 0;
+    animation: fadeUp .8s ease-out 3s forwards;
+    pointer-events: none;
+  }
+
+  /* Reducir efectos del cierre */
+  body.reduce-effects .holo-glow,
+  body.reduce-effects .corazon-holo,
+  body.reduce-effects .sparkles span { animation: none !important; }
+  body.reduce-effects .trazo-corazon { animation: none !important; stroke-dashoffset: 0 !important; }
+  body.reduce-effects .texto-celebracion .linea-1,
+  body.reduce-effects .texto-celebracion .linea-2 { animation: none !important; opacity: 1 !important; }
+
+  @media (min-width: 768px) {
+    #videoStage { inset: 12px; border-radius: 20px; }
+    #hud { font-size: 13px; top: 20px; left: 20px; }
+    #camPiP { right: 20px; bottom: 20px; border-radius: 18px; }
+    #progreso { top: 60px; }
+    .pantalla h1 { font-size: 24px; }
+    .pantalla p { font-size: 14px; }
+    #btnRend { left: 20px; bottom: 20px; }
+  }
+  @media (max-width: 360px) {
+    :root { --pip-size: clamp(90px, 28vw, 140px); --pip-size-fs: clamp(60px, 12vw, 90px); }
+    .chip { padding: 3px 8px; font-size: 10px; }
+    .gestos-grid { gap: 6px; }
+    .gestos-grid > div { padding: 6px 8px; font-size: 10px; }
+    .gestos-grid .emoji { font-size: 17px; }
+    #presetsGrid { grid-template-columns: repeat(3, 1fr); }
+  }
 </style>
 </head>
 <body>
 <div id="app">
 
-  <div id="reproductor">
+  <div id="videoStage">
     <video id="video" playsinline loop muted></video>
-    <div id="mensajeVideo">Muestra un gesto frente a la cámara para reproducir un video</div>
+    <div id="mensajeVideo">Muestra una seña con AMBAS manos frente a la cámara</div>
   </div>
 
-  <div id="camZone">
+  <div id="welcome" class="oculto">
+    <div class="boot">SISTEMA EN LÍNEA</div>
+    <h1>¿Con qué empezamos, <span>Alex</span>?</h1>
+    <div class="sub">Haz una seña con AMBAS manos o toca una opción</div>
+    <div class="gestos-grid">
+      <div data-video="0"><span class="emoji">☝️☝️</span><div><span class="label">Video 1</span><span class="hint">1 dedo (2 manos)</span></div></div>
+      <div data-video="1"><span class="emoji">✌️✌️</span><div><span class="label">Video 2</span><span class="hint">2 dedos (2 manos)</span></div></div>
+      <div data-video="2"><span class="emoji">🖖🖖</span><div><span class="label">Video 3</span><span class="hint">3 dedos (2 manos)</span></div></div>
+      <div data-video="3"><span class="emoji">🤙🤙</span><div><span class="label">Video 4</span><span class="hint">Pulgar + meñique</span></div></div>
+      <div data-video="4"><span class="emoji">🖐️🖐️</span><div><span class="label">Video 5</span><span class="hint">5 dedos</span></div></div>
+      <div data-action="playpause"><span class="emoji">✊✊</span><div><span class="label">Play / Pausa</span><span class="hint">Puño</span></div></div>
+      <div data-action="siguiente"><span class="emoji">👍👍</span><div><span class="label">Siguiente</span><span class="hint">Pulgar arriba</span></div></div>
+      <div data-action="fullscreen"><span class="emoji">🤟🤟</span><div><span class="label">Pantalla completa</span><span class="hint">"Te amo"</span></div></div>
+      <div data-gesto="corazon"><span class="emoji">💚</span><div><span class="label">Corazón · Cierre</span><span class="hint">Juntar índices y pulgares</span></div></div>
+    </div>
+  </div>
+
+  <div id="hud">
+    <div class="chip">FPS <b id="fps">0</b></div>
+    <div class="chip">Gesto <b id="gestoActual">—</b></div>
+    <div class="chip">Video <b id="videoActual">—</b>/5</div>
+  </div>
+
+  <div id="progreso">
+    <div id="progresoTexto">—</div>
+    <div id="progresoBarra"><div id="progresoFill"></div></div>
+  </div>
+
+  <button class="btn-flotante" id="btnAyuda">?</button>
+  <button class="btn-flotante" id="btnMute">🔇</button>
+  <button class="btn-flotante" id="btnFull">🔳</button>
+  <button class="btn-flotante" id="btnRend">⚡</button>
+
+  <div id="ayuda">
+    <div class="titulo">🙌 Gestos (2 manos)</div>
+    <div><b>☝️☝️</b> Índice → Video 1</div>
+    <div><b>✌️✌️</b> Índice+Medio → Video 2</div>
+    <div><b>🖖🖖</b> 3 dedos → Video 3</div>
+    <div><b>🤙🤙</b> Pulgar+Meñique → Video 4</div>
+    <div><b>🖐️🖐️</b> 5 dedos → Video 5</div>
+    <div><b>✊✊</b> Puño → Play/Pausa</div>
+    <div><b>👍👍</b> Pulgar arriba → Siguiente</div>
+    <div><b>🤟🤟</b> "Te amo" → Pantalla completa</div>
+    <div><b>💚💚</b> Corazón → Cierre ✨</div>
+    <div style="margin-top:6px;color:#5a8ba8;font-size:10px;">Ambas manos deben mostrar el mismo gesto</div>
+  </div>
+
+  <div id="camPiP">
     <video id="cam" playsinline muted autoplay></video>
+    <img id="camImg" alt="Cámara IP">
     <canvas id="overlay"></canvas>
-
-    <div id="hud">
-      <div class="chip">FPS <b id="fps">0</b></div>
-      <div class="chip">Gesto <b id="gestoActual">—</b></div>
-      <div class="chip">Video <b id="videoActual">—</b>/5</div>
-    </div>
-
-    <div id="progreso">
-      <div id="progresoTexto">—</div>
-      <div id="progresoBarra"><div id="progresoFill"></div></div>
-    </div>
-
-    <div id="ayuda">
-      <div><b>☝️ Índice</b> → Video 1</div>
-      <div><b>✌️ Índice+Medio</b> → Video 2</div>
-      <div><b>🤟 3 dedos</b> → Video 3</div>
-      <div><b>🤙 Pulgar+Meñique</b> → Video 4</div>
-      <div><b>🖐️ 5 dedos</b> → Video 5</div>
-      <div><b>✊ Puño</b> → Play/Pausa</div>
-      <div><b>👍 Pulgar arriba</b> → Siguiente</div>
-      <div style="margin-top:4px; color:#5a8ba8;">Mantén 1.2s cada gesto</div>
-    </div>
-
-    <button id="btnMute">🔇</button>
-    <button id="btnAyuda">?</button>
   </div>
 
   <div id="inicio" class="pantalla">
-    <h1>🤖 Control por Gestos</h1>
-    <p>Controla 5 videos con señas. Mantén cada gesto 1.2 segundos para activarlo.</p>
+    <h1>🤖 Control por Gestos (2 manos)</h1>
+    <p>Muestra el mismo gesto con AMBAS manos. Mantén la seña un instante para activarla. Ajusta el rendimiento si va lento en tu dispositivo.</p>
     <div id="estado">Pulsa Iniciar para comenzar</div>
     <button id="btnIniciar">Iniciar cámara</button>
-    <button id="btnConfig" class="sec">⚙️ Configurar URLs</button>
+    <button id="btnRend2" class="sec small">⚡ Rendimiento</button>
+    <button id="btnConfig" class="sec small">⚙️ Configurar</button>
     <div id="error"></div>
   </div>
 
+  <div id="rendimiento" class="pantalla oculto">
+    <h1>⚡ Rendimiento</h1>
+    <p>Elige un preset rápido o ajusta manualmente.</p>
+
+    <div id="presetsGrid">
+      <button data-preset="minimo">Mínimo</button>
+      <button data-preset="bajo">Bajo</button>
+      <button data-preset="medio">Medio</button>
+      <button data-preset="alto">Alto</button>
+      <button data-preset="auto">Auto</button>
+    </div>
+
+    <div id="rendInfo"></div>
+
+    <div id="rendPanel">
+      <label>Resolución de procesamiento
+        <select id="selResolucion">
+          <option value="128x96">128×96 · más rápido</option>
+          <option value="160x120">160×120</option>
+          <option value="192x144">192×144</option>
+          <option value="256x192">256×192</option>
+          <option value="320x240">320×240 · mejor detección</option>
+        </select>
+      </label>
+
+      <label>FPS máximo de detección
+        <select id="selFps">
+          <option value="6">6 · mínimo</option>
+          <option value="8">8</option>
+          <option value="12">12</option>
+          <option value="15">15</option>
+          <option value="20">20</option>
+          <option value="30">30 · máximo</option>
+        </select>
+      </label>
+
+      <label>Calidad del overlay
+        <select id="selOverlay">
+          <option value="off">Apagado · más rápido</option>
+          <option value="low">Simple · solo puntos</option>
+          <option value="full">Completo · esqueleto</option>
+        </select>
+      </label>
+
+      <label>Complejidad del modelo
+        <select id="selModelo">
+          <option value="0">Lite · rápido</option>
+          <option value="1">Full · más preciso</option>
+        </select>
+      </label>
+
+      <label>Resolución de cámara
+        <select id="selCam">
+          <option value="320x240">320×240 · más rápido</option>
+          <option value="480x360">480×360</option>
+          <option value="640x480">640×480 · más nítido</option>
+        </select>
+      </label>
+
+      <label>Tiempo para activar gesto
+        <select id="selTiempo">
+          <option value="400">400 ms · rápido</option>
+          <option value="600">600 ms · balanceado</option>
+          <option value="900">900 ms · estable</option>
+          <option value="1200">1200 ms · muy estable</option>
+        </select>
+      </label>
+
+      <div class="checkbox-row">
+        <input type="checkbox" id="chkEfectos">
+        <label for="chkEfectos" style="flex-direction:row;color:#e8f6ff;font-size:12px;">Reducir efectos visuales</label>
+      </div>
+    </div>
+
+    <button id="btnAplicarRend">Aplicar</button>
+    <button id="btnCerrarRend" class="sec">Cerrar</button>
+  </div>
+
   <div id="config" class="pantalla oculto">
-    <h1>⚙️ URLs de los videos</h1>
-    <p>Enlaces directos (.mp4). No YouTube/Drive.</p>
+    <h1>⚙️ Configuración</h1>
+    <p>Cámara externa (opcional) y URLs de videos.</p>
     <div id="configPanel"></div>
     <button id="btnGuardar">Guardar</button>
     <button id="btnCancelar" class="sec">Cancelar</button>
   </div>
+
+  <!-- ═══ CIERRE: CORAZÓN HOLOGRÁFICO ═══ -->
+  <div id="celebracion" class="oculto" role="dialog" aria-label="Gracias por visitar nuestro stand">
+    <div class="holo-glow"></div>
+    <svg class="corazon-holo" viewBox="0 0 100 100" aria-hidden="true">
+      <defs>
+        <linearGradient id="gradCorazon" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#38ffb0"/>
+          <stop offset="55%" stop-color="#00d1ff"/>
+          <stop offset="100%" stop-color="#ff4d9d"/>
+        </linearGradient>
+        <filter id="glowHolo" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="1.6" result="blur"/>
+          <feMerge>
+            <feMergeNode in="blur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+      </defs>
+      <path class="trazo-corazon"
+            d="M50 88 C 20 65, 8 45, 15 30 C 22 15, 40 15, 50 30 C 60 15, 78 15, 85 30 C 92 45, 80 65, 50 88 Z"
+            fill="none" stroke="url(#gradCorazon)" stroke-width="2.2"
+            stroke-linecap="round" filter="url(#glowHolo)"/>
+    </svg>
+    <div class="texto-celebracion">
+      <div class="linea-1">gracias por visitar</div>
+      <div class="linea-2">nuestro stand ✨</div>
+    </div>
+    <div class="sparkles" aria-hidden="true">
+      <span>✨</span><span>✨</span><span>✨</span><span>✨</span><span>✨</span>
+    </div>
+    <div class="tap-cerrar">toca para cerrar</div>
+  </div>
+
 </div>
 
 <script>
-/* ==================== CONFIG ==================== */
-let VIDEOS = ['./vid1.mp4', './vid2.mp4', './vid3.mp4', './vid4.mp4', './vid5.mp4'];
- 
+/* ═══════════════ CONFIGURACIÓN ═══════════════ */
+const VIDEOS_DEFAULT = ['./vid1.mp4', './vid2.mp4', './vid3.mp4', './vid4.mp4', './vid5.mp4'];
+let VIDEOS = VIDEOS_DEFAULT.slice();
 try {
   const s = localStorage.getItem('ia_gestos_videos');
   if (s) { const a = JSON.parse(s); if (Array.isArray(a) && a.length===5) VIDEOS = a; }
 } catch(e) {}
 
 const COMANDOS = {
-  'indice':                             { tipo:'video',     valor:0, nombre:'☝️ Video 1' },
-  'indice_medio':                       { tipo:'video',     valor:1, nombre:'✌️ Video 2' },
-  'indice_medio_anular':                { tipo:'video',     valor:2, nombre:'🤟 Video 3' },
-  'menique_pulgar':                     { tipo:'video',     valor:3, nombre:'🤙 Video 4' },
-  'anular_indice_medio_menique_pulgar': { tipo:'video',     valor:4, nombre:'🖐️ Video 5' },
-  'nada':                               { tipo:'playpause',          nombre:'✊ Play/Pausa' },
-  'pulgar_arriba':                      { tipo:'siguiente',          nombre:'👍 Siguiente' }
+  'indice':                             { tipo:'video',      valor:0, nombre:'☝️ Video 1' },
+  'indice_medio':                       { tipo:'video',      valor:1, nombre:'✌️ Video 2' },
+  'anular_indice_medio':                { tipo:'video',      valor:2, nombre:'🖖 Video 3' },
+  'menique_pulgar':                     { tipo:'video',      valor:3, nombre:'🤙 Video 4' },
+  'anular_indice_medio_menique_pulgar': { tipo:'video',      valor:4, nombre:'🖐️ Video 5' },
+  'nada':                               { tipo:'playpause',           nombre:'✊ Play/Pausa' },
+  'pulgar_arriba':                      { tipo:'siguiente',           nombre:'👍 Siguiente' },
+  'indice_menique_pulgar':              { tipo:'fullscreen',          nombre:'🤟 Pantalla completa' },
+  'corazon':                            { tipo:'celebracion',         nombre:'💚 Corazón' }
+};
+
+const PRESETS = {
+  minimo: {
+    procW: 128, procH: 96,
+    camWidth: 320, camHeight: 240,
+    maxFps: 8,
+    modelComplexity: 0,
+    overlayQuality: 'off',
+    reduceEffects: true,
+    duracionEstableMs: 900,
+    minFramesEstables: 3,
+    canvasScale: 0.6
+  },
+  bajo: {
+    procW: 160, procH: 120,
+    camWidth: 320, camHeight: 240,
+    maxFps: 12,
+    modelComplexity: 0,
+    overlayQuality: 'low',
+    reduceEffects: true,
+    duracionEstableMs: 750,
+    minFramesEstables: 3,
+    canvasScale: 0.8
+  },
+  medio: {
+    procW: 256, procH: 192,
+    camWidth: 480, camHeight: 360,
+    maxFps: 20,
+    modelComplexity: 0,
+    overlayQuality: 'full',
+    reduceEffects: false,
+    duracionEstableMs: 600,
+    minFramesEstables: 3,
+    canvasScale: 1
+  },
+  alto: {
+    procW: 320, procH: 240,
+    camWidth: 640, camHeight: 480,
+    maxFps: 30,
+    modelComplexity: 0,
+    overlayQuality: 'full',
+    reduceEffects: false,
+    duracionEstableMs: 500,
+    minFramesEstables: 4,
+    canvasScale: 1
+  }
 };
 
 const CONFIG = {
-  framesRequeridos: 28,
-  framesReset: 15,
-  cooldownMs: 700,
-  fingerThreshold: 1.18,
-  thumbThreshold: 1.35,
-  mediapipeBase: 'https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240'
+  preset: 'auto',
+  duracionEstableMs: 600,
+  minFramesEstables: 3,
+  cooldownMs: 1200,
+  framesReset: 8,
+  procW: 256, procH: 192,
+  camWidth: 480, camHeight: 360,
+  maxFps: 20,
+  modelComplexity: 0,
+  maxNumHands: 2,
+  minDetectionConfidence: 0.6,
+  minTrackingConfidence: 0.5,
+  overlayQuality: 'full',
+  reduceEffects: false,
+  canvasScale: 1,
+  mediapipeBase: 'https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240',
+  camaraUrl: ''
 };
 
+/* Cargar config guardada */
+try {
+  const sc = localStorage.getItem('ia_gestos_config_v3');
+  if (sc) {
+    const o = JSON.parse(sc);
+    Object.keys(o).forEach(k => { if (k in CONFIG) CONFIG[k] = o[k]; });
+  }
+} catch(e) {}
+
+/* Detectar capacidad del dispositivo para preset inicial */
+function detectarCapacidad() {
+  const cores = navigator.hardwareConcurrency || 2;
+  const mem = navigator.deviceMemory || 2;
+  if (cores <= 2 || mem <= 1) return 'minimo';
+  if (cores <= 4 || mem <= 2) return 'bajo';
+  if (cores <= 6 || mem <= 4) return 'medio';
+  return 'alto';
+}
+
+/* ═══════════════ ESTADO ═══════════════ */
 const estado = {
   hands:null, corriendo:false, indiceVideo:0,
-  gestoActual:null, framesEstables:0,
+  gestoActual:null, gestoStartTime:0, framesEstables:0,
   esperandoNeutro:false, comandoEjecutado:null,
-  framesSinManos:0, ultimaAccion:0
+  framesSinManos:0, ultimaAccion:0, esFullscreen:false,
+  welcomeVisible:false, activeCam: null, enviandoFrame: false,
+  fpsSamples: [],
+  ultimoCorazon: 0, _timerCorazon: null
 };
 
-const cam = document.getElementById('cam');
-const video = document.getElementById('video');
-const canvas = document.getElementById('overlay');
-const ctx = canvas.getContext('2d');
-let cw=0, ch=0, fps=0, framesFps=0, tFps=performance.now(), lastSend=0;
-
 const $ = id => document.getElementById(id);
+const cam = $('cam');
+const camImg = $('camImg');
+const video = $('video');
+const canvas = $('overlay');
+const ctx = canvas.getContext('2d', { alpha: true });
+const camPiP = $('camPiP');
+
+const procCanvas = document.createElement('canvas');
+const procCtx = procCanvas.getContext('2d', { alpha: false });
+
+function actualizarProcCanvas() {
+  procCanvas.width = CONFIG.procW;
+  procCanvas.height = CONFIG.procH;
+}
+actualizarProcCanvas();
+
+let cw=0, ch=0, fps=0, framesFps=0, tFps=performance.now(), lastSend=0;
+let lastHudGesto='', lastHudFps=-1;
+let lastProgressPct=-1, lastProgressTexto='';
+
 const setEstado = m => { const e=$('estado'); if(e) e.textContent=m; };
 const setError  = m => { const e=$('error');  if(e) e.textContent=m; };
 
 function ajustarCanvas(){
   const r = canvas.getBoundingClientRect();
-  cw = canvas.width  = Math.round(r.width);
-  ch = canvas.height = Math.round(r.height);
+  if (r.width <= 0 || r.height <= 0) return;
+  const s = CONFIG.canvasScale || 1;
+  cw = canvas.width  = Math.max(1, Math.round(r.width * s));
+  ch = canvas.height = Math.max(1, Math.round(r.height * s));
 }
 window.addEventListener('resize', ajustarCanvas);
 window.addEventListener('orientationchange', () => setTimeout(ajustarCanvas, 300));
+camPiP.addEventListener('transitionend', (e) => {
+  if (e.propertyName === 'width') ajustarCanvas();
+});
 
-function proy(lm){
-  const vw=cam.videoWidth||640, vh=cam.videoHeight||480;
-  const s=Math.max(cw/vw, ch/vh);
-  const dw=vw*s, dh=vh*s;
-  const ox=(cw-dw)/2, oy=(ch-dh)/2;
-  return { x: cw-(ox+lm.x*dw), y: oy+lm.y*dh };
+/* ═══════════════ APLICAR PRESET / CONFIG ═══════════════ */
+function aplicarEfectos() {
+  document.body.classList.toggle('reduce-effects', !!CONFIG.reduceEffects);
 }
 
-function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y, (a.z||0)-(b.z||0)); }
+function aplicarPreset(nombre, silencioso) {
+  if (nombre === 'auto') {
+    CONFIG.preset = 'auto';
+    if (!silencioso) {
+      const det = detectarCapacidad();
+      const p = PRESETS[det];
+      Object.assign(CONFIG, p);
+      CONFIG.preset = 'auto';
+      aplicarEfectos();
+      actualizarProcCanvas();
+      ajustarCanvas();
+      const info = $('rendInfo');
+      if (info) info.textContent = 'Auto: hardware detectado → ' + det + '. Se ajustará tras medir FPS reales.';
+      sincronizarUI();
+      guardarConfig();
+    }
+    return;
+  }
+  const p = PRESETS[nombre];
+  if (!p) return;
+  Object.assign(CONFIG, p);
+  CONFIG.preset = nombre;
+  aplicarEfectos();
+  actualizarProcCanvas();
+  ajustarCanvas();
+  if (!silencioso) {
+    const info = $('rendInfo');
+    if (info) info.textContent = 'Preset "' + nombre + '" aplicado.';
+  }
+  sincronizarUI();
+  guardarConfig();
+}
+
+function guardarConfig() {
+  try { localStorage.setItem('ia_gestos_config_v3', JSON.stringify(CONFIG)); } catch(e) {}
+}
+
+/* ═══════════════ AUTO-MEDICIÓN ═══════════════ */
+let autoTimer = null;
+function iniciarAutoDeteccion() {
+  if (autoTimer) clearInterval(autoTimer);
+  if (CONFIG.preset !== 'auto') return;
+  estado.fpsSamples = [];
+  autoTimer = setInterval(() => {
+    if (!estado.corriendo) return;
+    estado.fpsSamples.push(fps);
+    if (estado.fpsSamples.length >= 5) {
+      clearInterval(autoTimer); autoTimer = null;
+      const prom = estado.fpsSamples.reduce((a,b)=>a+b,0) / estado.fpsSamples.length;
+      let elegido;
+      if (prom < 6) elegido = 'minimo';
+      else if (prom < 10) elegido = 'bajo';
+      else if (prom < 18) elegido = 'medio';
+      else elegido = 'alto';
+      const mensaje = 'Auto: ' + Math.round(prom) + ' fps medidos → ajustado a "' + elegido + '".';
+      aplicarPreset(elegido, true);
+      CONFIG.preset = 'auto';
+      guardarConfig();
+      const info = $('rendInfo');
+      if (info) info.textContent = mensaje;
+    }
+  }, 1000);
+}
+
+/* ═══════════════ PROYECCIÓN / DIBUJO ═══════════════ */
+function proy(lm){
+  const src = estado.activeCam || cam;
+  const vw = src.videoWidth || src.naturalWidth || 640;
+  const vh = src.videoHeight || src.naturalHeight || 480;
+  const s = Math.max(cw/vw, ch/vh);
+  const dw = vw*s, dh = vh*s;
+  const ox = (cw-dw)/2, oy = (ch-dh)/2;
+  return { x: cw - (ox + lm.x * dw), y: oy + lm.y * dh };
+}
+
+function dist2D(a, b){ return Math.hypot(a.x-b.x, a.y-b.y); }
 
 function analizarMano(lm){
   const w = lm[0];
-  const indice  = dist(lm[8], w)  > dist(lm[5], w)  * CONFIG.fingerThreshold;
-  const medio   = dist(lm[12], w) > dist(lm[9], w)  * CONFIG.fingerThreshold;
-  const anular  = dist(lm[16], w) > dist(lm[13], w) * CONFIG.fingerThreshold;
-  const menique = dist(lm[20], w) > dist(lm[17], w) * CONFIG.fingerThreshold;
-  const pulgar  = dist(lm[4], lm[5]) > dist(lm[2], lm[5]) * CONFIG.thumbThreshold;
+  const umbral = 1.12;
+
+  const indice  = dist2D(lm[8],  w) > dist2D(lm[6],  w) * umbral;
+  const medio   = dist2D(lm[12], w) > dist2D(lm[10], w) * umbral;
+  const anular  = dist2D(lm[16], w) > dist2D(lm[14], w) * umbral;
+  const menique = dist2D(lm[20], w) > dist2D(lm[18], w) * umbral;
+  const pulgar  = dist2D(lm[4], lm[5]) > dist2D(lm[3], lm[5]) * 1.35;
 
   const pulgarArriba = pulgar && !indice && !medio && !anular && !menique
-    && lm[4].y < lm[3].y - 0.015
-    && lm[3].y < lm[2].y - 0.015;
+    && lm[4].y < lm[2].y - 0.02;
 
-  if (pulgarArriba) return { patron:'pulgar_arriba', dedos:1 };
+  if (pulgarArriba) return { patron: 'pulgar_arriba', dedos: 1 };
 
-  const a=[];
-  if(anular)  a.push('anular');
-  if(indice)  a.push('indice');
-  if(medio)   a.push('medio');
-  if(menique) a.push('menique');
-  if(pulgar)  a.push('pulgar');
+  const ext = [];
+  if (indice)  ext.push('indice');
+  if (medio)   ext.push('medio');
+  if (anular)  ext.push('anular');
+  if (menique) ext.push('menique');
+  if (pulgar)  ext.push('pulgar');
+  ext.sort();
 
-  return { patron: a.length===0 ? 'nada' : a.join('_'), dedos:a.length };
+  return {
+    patron: ext.length === 0 ? 'nada' : ext.join('_'),
+    dedos: ext.length
+  };
 }
 
+/* ═══════════════ DETECCIÓN DE CORAZÓN (2 MANOS) ═══════════════ */
+function detectarCorazon(manos){
+  if (!manos || manos.length < 2) return false;
+  const m1 = manos[0], m2 = manos[1];
+
+  // Tamaño de referencia: muñeca (0) → nudillo medio (9)
+  const size1 = dist2D(m1[0], m1[9]);
+  const size2 = dist2D(m2[0], m2[9]);
+  const avgSize = (size1 + size2) / 2;
+  if (avgSize < 0.01) return false;
+
+  // Puntos clave del corazón
+  const i1 = m1[8], i2 = m2[8];   // puntas de índices (arriba)
+  const t1 = m1[4], t2 = m2[4];   // puntas de pulgares (abajo)
+
+  // Distancias entre contactos
+  const dIdxIdx     = dist2D(i1, i2);
+  const dThumbThumb = dist2D(t1, t2);
+
+  // Manos cercanas (no en extremos opuestos)
+  const dWrists   = dist2D(m1[0], m2[0]);
+  const manosJuntas = dWrists < avgSize * 3.6;
+
+  // Índices tocándose arriba y pulgares tocándose abajo
+  const cercaIdx    = dIdxIdx     < avgSize * 0.65;
+  const cercaThumb  = dThumbThumb < avgSize * 0.65;
+
+  // Los índices deben estar claramente POR ENCIMA de los pulgares
+  const avgIdxY   = (i1.y + i2.y) / 2;
+  const avgThumbY = (t1.y + t2.y) / 2;
+  const apuntaArriba = avgIdxY < avgThumbY - avgSize * 0.12;
+
+  // Manos deben estar levantadas (dedos por encima de las muñecas)
+  const avgWristY = (m1[0].y + m2[0].y) / 2;
+  const manosArriba = avgIdxY < avgWristY && avgThumbY < avgWristY;
+
+  // Evitar falsos positivos con palmas enfrentadas tipo "rezo"
+  const dIdxPul_m1 = dist2D(i1, t1);
+  const dIdxPul_m2 = dist2D(i2, t2);
+  const formaCurva = (dIdxPul_m1 > dIdxIdx * 0.7) && (dIdxPul_m2 > dIdxIdx * 0.7);
+
+  return cercaIdx && cercaThumb && manosJuntas && apuntaArriba && manosArriba && formaCurva;
+}
+
+/* ═══════════════ LÓGICA DE GESTOS (basada en TIEMPO) ═══════════════ */
 function procesarPatron(patron){
+  if (!patron){
+    estado.gestoActual = null;
+    estado.framesEstables = 0;
+    return;
+  }
   if (estado.esperandoNeutro && patron !== estado.comandoEjecutado){
     estado.esperandoNeutro = false;
     estado.comandoEjecutado = null;
   }
   if (estado.esperandoNeutro) return;
 
-  if (patron === estado.gestoActual) estado.framesEstables++;
-  else { estado.gestoActual = patron; estado.framesEstables = 1; }
+  const ahora = performance.now();
+  if (patron === estado.gestoActual) {
+    estado.framesEstables++;
+  } else {
+    estado.gestoActual = patron;
+    estado.framesEstables = 1;
+    estado.gestoStartTime = ahora;
+  }
 
-  if (estado.framesEstables >= CONFIG.framesRequeridos){
+  const elapsed = ahora - estado.gestoStartTime;
+  const framesOk = estado.framesEstables >= CONFIG.minFramesEstables;
+  const timeOk = elapsed >= CONFIG.duracionEstableMs;
+
+  if (framesOk && timeOk){
     const cmd = COMANDOS[patron];
-    const ahora = performance.now();
     if (cmd && (ahora - estado.ultimaAccion) > CONFIG.cooldownMs){
+      // Cooldown extra para el cierre (evita re-disparos)
+      if (cmd.tipo === 'celebracion') {
+        if (ahora - (estado.ultimoCorazon || 0) < 20000) return;
+        estado.ultimoCorazon = ahora;
+        ocultarBienvenida();
+      }
+      if (estado.welcomeVisible && cmd.tipo === 'video') ocultarBienvenida();
       ejecutarComando(cmd);
       estado.ultimaAccion = ahora;
       estado.esperandoNeutro = true;
       estado.comandoEjecutado = patron;
       estado.framesEstables = 0;
+      estado.gestoStartTime = ahora;
     }
   }
 }
@@ -243,20 +1003,85 @@ function ejecutarComando(cmd){
   if (cmd.tipo==='video') cargarVideo(cmd.valor);
   else if (cmd.tipo==='playpause') togglePlay();
   else if (cmd.tipo==='siguiente') cargarVideo((estado.indiceVideo+1)%VIDEOS.length);
+  else if (cmd.tipo==='fullscreen') toggleFullscreen();
+  else if (cmd.tipo==='celebracion') mostrarCorazon();
 }
 
+async function toggleFullscreen(){
+  if (document.fullscreenElement || estado.esFullscreen) {
+    if (document.fullscreenElement) {
+      try { await document.exitFullscreen(); } catch(e){}
+    }
+    if (!document.fullscreenElement) {
+      estado.esFullscreen = false;
+      camPiP.classList.remove('fullscreen');
+      actualizarBotonFull();
+      setTimeout(ajustarCanvas, 380);
+    }
+    return;
+  }
+
+  try {
+    const el = document.documentElement;
+    if (el.requestFullscreen) await el.requestFullscreen({ navigationUI: 'hide' });
+    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    else throw new Error('API no disponible');
+  } catch (e) {
+    console.warn('Pantalla completa no disponible:', e);
+    estado.esFullscreen = true;
+    camPiP.classList.add('fullscreen');
+    actualizarBotonFull();
+    setTimeout(ajustarCanvas, 380);
+  }
+}
+
+function actualizarBotonFull(){
+  const b = $('btnFull');
+  if (b) b.textContent = estado.esFullscreen ? '🔲' : '🔳';
+}
+
+function sincronizarFullscreen(){
+  estado.esFullscreen = !!document.fullscreenElement;
+  camPiP.classList.toggle('fullscreen', estado.esFullscreen);
+  actualizarBotonFull();
+  if (estado.esFullscreen) $('ayuda').classList.remove('visible');
+  setTimeout(ajustarCanvas, 380);
+}
+
+document.addEventListener('fullscreenchange', sincronizarFullscreen);
+document.addEventListener('webkitfullscreenchange', sincronizarFullscreen);
+
+function mostrarBienvenida(){
+  estado.welcomeVisible = true;
+  $('welcome').classList.remove('oculto');
+}
+function ocultarBienvenida(){
+  if (!estado.welcomeVisible) return;
+  estado.welcomeVisible = false;
+  $('welcome').classList.add('oculto');
+}
+
+/* ═══════════════ VIDEO ═══════════════ */
 function cargarVideo(idx){
   if (idx<0 || idx>=VIDEOS.length) return;
   const url = (VIDEOS[idx]||'').trim();
   if (!url){ mostrarMensaje('Video '+(idx+1)+' sin URL'); return; }
   estado.indiceVideo = idx;
+
+  $('videoStage').classList.add('loading');
+  setTimeout(() => $('videoStage').classList.remove('loading'), 700);
+
   video.src = url;
   video.currentTime = 0;
-  video.play().catch(e => {
-    console.warn('Play falló, reintento silenciado:', e);
-    video.muted = true;
-    video.play().catch(() => mostrarMensaje('No se pudo reproducir Video '+(idx+1)));
-  });
+  video.muted = false;
+  video.play()
+    .then(() => actualizarBotonMute())
+    .catch(() => {
+      video.muted = true;
+      video.play().then(actualizarBotonMute)
+        .catch(() => mostrarMensaje('No se pudo reproducir Video '+(idx+1)));
+    });
+
   ocultarMensaje();
   $('videoActual').textContent = idx + 1;
 }
@@ -275,242 +1100,582 @@ function ocultarMensaje(){
   $('mensajeVideo').classList.add('oculto'); video.style.visibility='visible';
 }
 
+/* ═══════════════ DIBUJO OVERLAY ═══════════════ */
 const CONEXIONES=[[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],
   [10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[13,17],[17,18],[18,19],[19,20],[0,17]];
 const COLORES=['#38ffb0','#00d1ff'];
 
 function rrect(x,y,w,h,r){
-  ctx.beginPath();
-  ctx.moveTo(x+r,y);
-  ctx.arcTo(x+w,y,x+w,y+h,r);
-  ctx.arcTo(x+w,y+h,x,y+h,r);
-  ctx.arcTo(x,y+h,x,y,r);
-  ctx.arcTo(x,y,x+w,y,r);
-  ctx.closePath();
+  ctx.beginPath(); ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
 }
 
-function dibujarMano(lm,idx,esActiva,patron){
-  const color=COLORES[idx%COLORES.length];
-  const pts=lm.map(proy);
-  const gr=Math.max(2,Math.round(cw/200));
-  const rad=Math.max(2,gr*1.5);
+function dibujarMano(lm,idx,esActiva,patron,esCorazon){
+  if (CONFIG.overlayQuality === 'off') return;
 
-  ctx.lineCap='round'; ctx.lineJoin='round';
-  ctx.strokeStyle=color; ctx.lineWidth=gr;
-  ctx.globalAlpha = esActiva ? 0.9 : 0.4;
-  ctx.beginPath();
-  for(const [a,b] of CONEXIONES){
-    ctx.moveTo(pts[a].x,pts[a].y);
-    ctx.lineTo(pts[b].x,pts[b].y);
-  }
-  ctx.stroke();
+  // Color rosa cuando se detecta corazón
+  const color = esCorazon
+    ? '#ff4d9d'
+    : COLORES[idx%COLORES.length];
+  const pts = lm.map(proy);
+  const gr = Math.max(1.5, Math.round(cw/180));
+  const rad = Math.max(1.8, gr*1.4);
+  const low = (CONFIG.overlayQuality === 'low');
 
-  ctx.globalAlpha = esActiva ? 1 : 0.5;
-  ctx.fillStyle = color;
-  for(let i=0;i<pts.length;i++){
+  if (!low){
+    ctx.lineCap='round'; ctx.lineJoin='round';
+    ctx.strokeStyle=color; ctx.lineWidth=gr;
+    ctx.globalAlpha = esActiva ? 0.9 : 0.35;
     ctx.beginPath();
-    ctx.arc(pts[i].x,pts[i].y, i===0?rad*1.4:rad, 0, Math.PI*2);
-    ctx.fill();
+    for(let i=0;i<CONEXIONES.length;i++){
+      const [a,b] = CONEXIONES[i];
+      ctx.moveTo(pts[a].x,pts[a].y);
+      ctx.lineTo(pts[b].x,pts[b].y);
+    }
+    ctx.stroke();
   }
 
-  if (esActiva){
+  ctx.globalAlpha = esActiva ? 1 : 0.45;
+  ctx.fillStyle = color;
+  if (low){
+    const idxs = [0, 8, 12, 16, 20];
+    for (let k=0;k<idxs.length;k++){
+      const p = pts[idxs[k]];
+      ctx.beginPath(); ctx.arc(p.x, p.y, rad*1.1, 0, Math.PI*2); ctx.fill();
+    }
+  } else {
+    for (let i=0;i<pts.length;i++){
+      ctx.beginPath();
+      ctx.arc(pts[i].x, pts[i].y, i===0?rad*1.3:rad, 0, Math.PI*2);
+      ctx.fill();
+    }
+  }
+
+  if (!low && cw > 120){
     let minY=Infinity, sx=0;
     for(const p of pts) if(p.y<minY){ minY=p.y; sx=p.x; }
     const cmd = COMANDOS[patron];
-    etiqueta(cmd ? cmd.nombre : '❓ '+patron, sx, minY, color);
+    const txt = esCorazon
+      ? '💚 Corazón'
+      : (cmd ? cmd.nombre : (patron === 'nada' ? '✊' : '· ' + (patron||'—')));
+    etiqueta(txt, sx, minY, color);
   }
   ctx.globalAlpha=1;
 }
 
 function etiqueta(texto,x,y,color){
-  const fs=Math.max(10,Math.round(cw/45));
-  const pad=Math.round(fs*0.5);
-  ctx.font='600 '+fs+'px -apple-system,sans-serif';
-  const w=ctx.measureText(texto).width+pad*2;
-  const h=fs+pad*2;
-  let bx=Math.max(4,Math.min(cw-w-4,x-w/2));
-  let by=y-h-8; if(by<4) by=y+12;
+  const fs = Math.max(9, Math.round(cw/22));
+  const pad = Math.round(fs*0.5);
+  ctx.font = '600 ' + fs + 'px -apple-system,sans-serif';
+  const w = ctx.measureText(texto).width + pad*2;
+  const h = fs + pad*2;
+  let bx = Math.max(2, Math.min(cw-w-2, x-w/2));
+  let by = y-h-6; if (by<2) by = y+8;
 
-  ctx.fillStyle='rgba(4,10,18,.85)';
-  rrect(bx,by,w,h,6); ctx.fill();
-  ctx.strokeStyle=color; ctx.lineWidth=1.5;
-  rrect(bx,by,w,h,6); ctx.stroke();
-  ctx.fillStyle=color; ctx.textAlign='left'; ctx.textBaseline='middle';
-  ctx.fillText(texto,bx+pad,by+h/2);
+  ctx.fillStyle = 'rgba(4,10,18,.85)';
+  rrect(bx,by,w,h,5); ctx.fill();
+  ctx.strokeStyle = color; ctx.lineWidth = 1;
+  rrect(bx,by,w,h,5); ctx.stroke();
+  ctx.fillStyle = color; ctx.textAlign='left'; ctx.textBaseline='middle';
+  ctx.fillText(texto, bx+pad, by+h/2);
 }
 
+/* ═══════════════ CELEBRACIÓN DE CIERRE ═══════════════ */
+function mostrarCorazon(){
+  const el = $('celebracion');
+  if (!el) return;
+
+  const path = el.querySelector('.trazo-corazon');
+  if (path) {
+    path.style.animation = 'none';
+    void path.offsetHeight;
+    path.style.animation = '';
+  }
+
+  el.classList.remove('oculto');
+
+  clearTimeout(estado._timerCorazon);
+  estado._timerCorazon = setTimeout(ocultarCorazon, 9000);
+}
+
+function ocultarCorazon(){
+  const el = $('celebracion');
+  if (el) el.classList.add('oculto');
+  clearTimeout(estado._timerCorazon);
+}
+
+$('celebracion').addEventListener('click', ocultarCorazon);
+
+/* ═══════════════ RESULTADOS MEDIAPIPE ═══════════════ */
 function onResults(res){
   framesFps++;
-  const ahora=performance.now();
-  if(ahora-tFps>=1000){
-    fps=Math.round(framesFps*1000/(ahora-tFps));
-    framesFps=0; tFps=ahora;
-    $('fps').textContent=fps;
+  const ahora = performance.now();
+  if(ahora-tFps >= 1000){
+    fps = Math.round(framesFps*1000/(ahora-tFps));
+    framesFps = 0; tFps = ahora;
+    if (lastHudFps !== fps) { $('fps').textContent = fps; lastHudFps = fps; }
   }
-  ctx.clearRect(0,0,cw,ch);
+
+  if (!cw || !ch) ajustarCanvas();
+
+  if (CONFIG.overlayQuality !== 'off') {
+    ctx.clearRect(0,0,cw,ch);
+  } else {
+    if (canvas._dirty) {
+      ctx.clearRect(0,0,cw,ch);
+      canvas._dirty = false;
+    }
+  }
 
   const manos = res.multiHandLandmarks || [];
-  if (manos.length===0){
-    estado.framesSinManos++;
-    if (estado.framesSinManos>CONFIG.framesReset){
-      estado.esperandoNeutro=false;
-      estado.comandoEjecutado=null;
-      estado.gestoActual=null;
-      estado.framesEstables=0;
+  const analisis = manos.map(analizarMano);
+
+  let patronCombinado = null;
+  let coinciden = false;
+  let esCorazon = false;
+
+  if (manos.length >= 2){
+    if (detectarCorazon(manos)){
+      patronCombinado = 'corazon';
+      coinciden = true;
+      esCorazon = true;
+    } else if (analisis[0].patron === analisis[1].patron){
+      patronCombinado = analisis[0].patron;
+      coinciden = true;
     }
-    $('gestoActual').textContent='—';
-    actualizarProgreso(null);
+  }
+
+  if (CONFIG.overlayQuality !== 'off') {
+    for (let i=0;i<manos.length;i++){
+      dibujarMano(manos[i], i, coinciden, analisis[i].patron, esCorazon);
+    }
+    if (manos.length) canvas._dirty = true;
+  }
+
+  if (manos.length < 2){
+    estado.framesSinManos++;
+    if (estado.framesSinManos > CONFIG.framesReset){
+      estado.esperandoNeutro = false;
+      estado.comandoEjecutado = null;
+      estado.gestoActual = null;
+      estado.framesEstables = 0;
+    }
+    const txt = manos.length===1 ? '🙌 Falta 1 mano' : '—';
+    if (lastHudGesto !== txt) { $('gestoActual').textContent = txt; lastHudGesto = txt; }
+    camPiP.classList.remove('gesture-active');
+    camPiP.classList.toggle('waiting', manos.length===0);
+    actualizarProgreso(null, manos.length);
     return;
   }
-  estado.framesSinManos=0;
+  estado.framesSinManos = 0;
+  camPiP.classList.remove('waiting');
 
-  const info = analizarMano(manos[0]);
-  for(let i=0;i<manos.length;i++){
-    dibujarMano(manos[i], i, i===0, i===0?info.patron:null);
+  const cmd = patronCombinado ? COMANDOS[patronCombinado] : null;
+  const txtGesto = coinciden
+    ? (cmd ? cmd.nombre : '· '+patronCombinado)
+    : '❓ Gestos distintos';
+  if (lastHudGesto !== txtGesto) { $('gestoActual').textContent = txtGesto; lastHudGesto = txtGesto; }
+
+  const estable = coinciden && cmd && estado.framesEstables >= 2 && !estado.esperandoNeutro;
+  if (estable) camPiP.classList.add('gesture-active');
+  else camPiP.classList.remove('gesture-active');
+
+  procesarPatron(coinciden ? patronCombinado : null);
+  actualizarProgreso(patronCombinado, manos.length);
+}
+
+let lastProgressUpdate = 0;
+function actualizarProgreso(patron, numManos){
+  const ahora = performance.now();
+  if (ahora-lastProgressUpdate < 80) return;
+  lastProgressUpdate = ahora;
+  const box = $('progreso');
+
+  if (numManos < 2){
+    box.classList.add('visible');
+    const t = numManos===1 ? '🙌 Muestra la otra mano' : '🙌 Muestra ambas manos';
+    if (lastProgressTexto !== t) { $('progresoTexto').textContent = t; lastProgressTexto = t; }
+    if (lastProgressPct !== 0) { $('progresoFill').style.width = '0%'; lastProgressPct = 0; }
+    return;
   }
 
-  const cmd = COMANDOS[info.patron];
-  $('gestoActual').textContent = cmd ? cmd.nombre : (info.patron||'—');
-  procesarPatron(info.patron);
-  actualizarProgreso(info.patron);
-}
-
-let lastProgressUpdate=0;
-function actualizarProgreso(patron){
-  const ahora=performance.now();
-  if(ahora-lastProgressUpdate<60) return;
-  lastProgressUpdate=ahora;
-  const cmd=COMANDOS[patron];
-  const box=$('progreso');
-  if(!cmd || estado.esperandoNeutro){ box.classList.remove('visible'); return; }
+  const cmd = COMANDOS[patron];
+  if (!cmd || estado.esperandoNeutro || estado.gestoActual !== patron){
+    box.classList.remove('visible');
+    return;
+  }
   box.classList.add('visible');
-  const pct=Math.min(100,(estado.framesEstables/CONFIG.framesRequeridos)*100);
-  $('progresoTexto').textContent = cmd.nombre+' · '+Math.round(pct)+'%';
-  $('progresoFill').style.width = pct+'%';
+  const elapsed = ahora - estado.gestoStartTime;
+  const pct = Math.min(100, (elapsed / CONFIG.duracionEstableMs) * 100);
+  const pctInt = Math.round(pct);
+  const t = cmd.nombre + ' · ' + pctInt + '%';
+  if (lastProgressTexto !== t) { $('progresoTexto').textContent = t; lastProgressTexto = t; }
+  if (lastProgressPct !== pctInt) { $('progresoFill').style.width = pct + '%'; lastProgressPct = pctInt; }
 }
 
-let handsPromise=null;
+/* ═══════════════ CARGA MEDIAPIPE ═══════════════ */
+let handsPromise = null;
 function cargarMediaPipe(){
   if (handsPromise) return handsPromise;
   handsPromise = new Promise((resolve,reject)=>{
     if (window.Hands) return resolve();
-    const s=document.createElement('script');
-    s.src=CONFIG.mediapipeBase+'/hands.js';
-    s.crossOrigin='anonymous';
-    s.onload=()=> window.Hands ? resolve() : reject(new Error('Hands no disponible'));
-    s.onerror=()=> reject(new Error('No se pudo cargar MediaPipe'));
+    const s = document.createElement('script');
+    s.src = CONFIG.mediapipeBase + '/hands.js';
+    s.crossOrigin = 'anonymous';
+    s.onload = () => window.Hands ? resolve() : reject(new Error('Hands no disponible'));
+    s.onerror = () => reject(new Error('No se pudo cargar MediaPipe'));
     document.head.appendChild(s);
   });
   return handsPromise;
 }
 
+/* ═══════════════ BUCLE PRINCIPAL ═══════════════ */
 async function bucle(){
-  if(!estado.corriendo) return;
-  const ahora=performance.now();
-  if(cam.readyState>=2 && ahora-lastSend>40 && estado.hands){
-    lastSend=ahora;
-    try{ await estado.hands.send({image:cam}); } catch(e){}
+  if (!estado.corriendo) return;
+
+  const ahora = performance.now();
+  const minInterval = 1000 / Math.max(1, CONFIG.maxFps);
+
+  if (estado.enviandoFrame || (ahora - lastSend) < minInterval){
+    requestAnimationFrame(bucle);
+    return;
   }
-  if(estado.corriendo) requestAnimationFrame(bucle);
+
+  if (estado.activeCam && estado.hands){
+    lastSend = ahora;
+    estado.enviandoFrame = true;
+    try {
+      procCtx.drawImage(estado.activeCam, 0, 0, CONFIG.procW, CONFIG.procH);
+      await estado.hands.send({ image: procCanvas });
+    } catch(e){
+    } finally {
+      estado.enviandoFrame = false;
+    }
+  }
+
+  if (estado.corriendo) requestAnimationFrame(bucle);
 }
 
+/* ═══════════════ INICIO ═══════════════ */
 async function iniciar(){
-  const btn=$('btnIniciar');
-  btn.disabled=true; btn.textContent='Iniciando...';
-  setError('');
+  const btn = $('btnIniciar');
+  btn.disabled = true; btn.textContent = 'Iniciando...'; setError('');
 
-  try{
+  cam.style.display = 'block';
+  camImg.style.display = 'none';
+
+  try {
     setEstado('1/4 · Cargando MediaPipe...');
     await cargarMediaPipe();
 
-    setEstado('2/4 · Solicitando cámara...');
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
-      throw new Error('Tu navegador no soporta cámara. Necesitas HTTPS.');
+    if (CONFIG.camaraUrl){
+      setEstado('2/4 · Conectando a cámara externa...');
+      cam.style.display = 'none';
+      camImg.style.display = 'block';
+      camImg.src = CONFIG.camaraUrl;
+
+      await new Promise((resolve, reject) => {
+        camImg.onload = resolve;
+        camImg.onerror = () => reject(new Error('Error al cargar el stream. Revisa que la URL sea HTTP y termine en /video'));
+        setTimeout(() => reject(new Error('Timeout: la cámara externa no responde.')), 10000);
+      });
+
+      estado.activeCam = camImg;
+    } else {
+      setEstado('2/4 · Solicitando cámara...');
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+        throw new Error('Tu navegador no soporta cámara. Necesitas HTTPS o localhost.');
+      }
+
+      if (cam.srcObject){
+        cam.srcObject.getTracks().forEach(t => t.stop());
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: { ideal: CONFIG.camWidth },
+          height: { ideal: CONFIG.camHeight },
+          frameRate: { ideal: 30, max: 30 }
+        },
+        audio: false
+      });
+      cam.srcObject = stream;
+
+      await new Promise((resolve) => {
+        if (cam.readyState >= 2) return resolve();
+        cam.onloadeddata = resolve;
+      });
+      await cam.play();
+      estado.activeCam = cam;
     }
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video:{ facingMode:'user', width:{ideal:480}, height:{ideal:360},
-        frameRate:{ideal:24, max:30} },
-      audio:false
-    });
-    cam.srcObject = stream;
-    await cam.play();
+
+    const ajustarAspecto = () => {
+      const w = estado.activeCam.videoWidth || estado.activeCam.naturalWidth;
+      const h = estado.activeCam.videoHeight || estado.activeCam.naturalHeight;
+      if (w && h) {
+        camPiP.style.aspectRatio = w + '/' + h;
+        setTimeout(ajustarCanvas, 50);
+      }
+    };
+    if (estado.activeCam.videoWidth || estado.activeCam.naturalWidth) ajustarAspecto();
+    else estado.activeCam.addEventListener('load', ajustarAspecto, { once:true });
 
     setEstado('3/4 · Iniciando detector...');
-    estado.hands = new Hands({ locateFile: f => CONFIG.mediapipeBase+'/'+f });
+    estado.hands = new Hands({ locateFile: f => CONFIG.mediapipeBase + '/' + f });
     estado.hands.setOptions({
-      maxNumHands:2,
-      modelComplexity:0,
-      minDetectionConfidence:0.6,
-      minTrackingConfidence:0.5
+      maxNumHands: CONFIG.maxNumHands,
+      modelComplexity: CONFIG.modelComplexity,
+      minDetectionConfidence: CONFIG.minDetectionConfidence,
+      minTrackingConfidence: CONFIG.minTrackingConfidence
     });
     estado.hands.onResults(onResults);
 
     setEstado('4/4 · Calibrando...');
-    await estado.hands.send({ image: cam });
+    procCtx.drawImage(estado.activeCam, 0, 0, CONFIG.procW, CONFIG.procH);
+    await estado.hands.send({ image: procCanvas });
 
     ajustarCanvas();
     estado.corriendo = true;
     $('inicio').classList.add('oculto');
-    $('ayuda').classList.add('visible');
-
-    if (VIDEOS[0] && VIDEOS[0].trim()) cargarVideo(0);
+    mostrarBienvenida();
     bucle();
+
+    iniciarAutoDeteccion();
 
   } catch(e){
     console.error(e);
-    setError('Error: ' + (e.message||e.name));
+    setError('Error: ' + (e.message || e.name));
     setEstado('Falló el inicio');
-    btn.disabled=false; btn.textContent='Reintentar';
+    btn.disabled = false; btn.textContent = 'Reintentar';
   }
 }
 
-document.getElementById('btnIniciar').addEventListener('click', iniciar);
+$('btnIniciar').addEventListener('click', iniciar);
 
-document.getElementById('btnConfig').addEventListener('click', ()=>{
+/* ═══════════════ APLICAR CAMBIOS DE RENDIMIENTO ═══════════════ */
+function sincronizarUI(){
+  const el = document.getElementById('selResolucion');
+  if (el) el.value = CONFIG.procW + 'x' + CONFIG.procH;
+  const f = document.getElementById('selFps');
+  if (f) f.value = String(CONFIG.maxFps);
+  const ov = document.getElementById('selOverlay');
+  if (ov) ov.value = CONFIG.overlayQuality;
+  const mo = document.getElementById('selModelo');
+  if (mo) mo.value = String(CONFIG.modelComplexity);
+  const ca = document.getElementById('selCam');
+  if (ca) ca.value = CONFIG.camWidth + 'x' + CONFIG.camHeight;
+  const ti = document.getElementById('selTiempo');
+  if (ti) ti.value = String(CONFIG.duracionEstableMs);
+  const ef = document.getElementById('chkEfectos');
+  if (ef) ef.checked = !!CONFIG.reduceEffects;
+
+  document.querySelectorAll('#presetsGrid button').forEach(b => {
+    b.classList.toggle('activo', b.dataset.preset === CONFIG.preset);
+  });
+}
+
+function leerUIRendimiento(){
+  const res = $('selResolucion').value.split('x');
+  CONFIG.procW = parseInt(res[0], 10);
+  CONFIG.procH = parseInt(res[1], 10);
+
+  CONFIG.maxFps = parseInt($('selFps').value, 10);
+  CONFIG.overlayQuality = $('selOverlay').value;
+  CONFIG.modelComplexity = parseInt($('selModelo').value, 10);
+
+  const camRes = $('selCam').value.split('x');
+  const nuevoCamW = parseInt(camRes[0], 10);
+  const nuevoCamH = parseInt(camRes[1], 10);
+  const camCambio = (nuevoCamW !== CONFIG.camWidth || nuevoCamH !== CONFIG.camHeight);
+  CONFIG.camWidth = nuevoCamW;
+  CONFIG.camHeight = nuevoCamH;
+
+  CONFIG.duracionEstableMs = parseInt($('selTiempo').value, 10);
+  CONFIG.reduceEffects = $('chkEfectos').checked;
+
+  CONFIG.preset = 'custom';
+  actualizarProcCanvas();
+  aplicarEfectos();
+  ajustarCanvas();
+  guardarConfig();
+
+  if (estado.hands){
+    try {
+      estado.hands.setOptions({
+        maxNumHands: CONFIG.maxNumHands,
+        modelComplexity: CONFIG.modelComplexity,
+        minDetectionConfidence: CONFIG.minDetectionConfidence,
+        minTrackingConfidence: CONFIG.minTrackingConfidence
+      });
+    } catch(e){ console.warn(e); }
+  }
+
+  if (camCambio && estado.corriendo && estado.activeCam === cam){
+    reiniciarCamaraSolo();
+  }
+
+  sincronizarUI();
+}
+
+async function reiniciarCamaraSolo(){
+  try {
+    if (cam.srcObject) cam.srcObject.getTracks().forEach(t => t.stop());
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        width: { ideal: CONFIG.camWidth },
+        height: { ideal: CONFIG.camHeight },
+        frameRate: { ideal: 30, max: 30 }
+      },
+      audio: false
+    });
+    cam.srcObject = stream;
+    await new Promise((resolve) => {
+      if (cam.readyState >= 2) return resolve();
+      cam.onloadeddata = resolve;
+    });
+    await cam.play();
+    estado.activeCam = cam;
+    const w = cam.videoWidth, h = cam.videoHeight;
+    if (w && h) camPiP.style.aspectRatio = w + '/' + h;
+    ajustarCanvas();
+  } catch(e){
+    console.warn('No se pudo reiniciar la cámara:', e);
+  }
+}
+
+$('btnRend2').addEventListener('click', ()=>{
+  $('inicio').classList.add('oculto');
+  $('rendimiento').classList.remove('oculto');
+  sincronizarUI();
+});
+
+$('btnRend').addEventListener('click', ()=>{
+  $('rendimiento').classList.remove('oculto');
+  sincronizarUI();
+});
+
+document.querySelectorAll('#presetsGrid button').forEach(b => {
+  b.addEventListener('click', () => {
+    const p = b.dataset.preset;
+    aplicarPreset(p);
+    if (p === 'auto'){
+      iniciarAutoDeteccion();
+    }
+    document.querySelectorAll('#presetsGrid button').forEach(x => {
+      x.classList.toggle('activo', x.dataset.preset === p);
+    });
+  });
+});
+
+$('btnAplicarRend').addEventListener('click', ()=>{
+  leerUIRendimiento();
+  const info = $('rendInfo');
+  if (info) info.textContent = 'Cambios aplicados.';
+});
+
+$('btnCerrarRend').addEventListener('click', ()=>{
+  $('rendimiento').classList.add('oculto');
+  if (!estado.corriendo && $('inicio').classList.contains('oculto') && $('config').classList.contains('oculto')) {
+    $('inicio').classList.remove('oculto');
+  }
+});
+
+/* ═══════════════ CONFIG (videos + cámara) ═══════════════ */
+$('btnConfig').addEventListener('click', ()=>{
   construirPanelConfig();
   $('inicio').classList.add('oculto');
   $('config').classList.remove('oculto');
 });
 
-document.getElementById('btnGuardar').addEventListener('click', ()=>{
-  const urls=[];
+$('btnGuardar').addEventListener('click', ()=>{
+  const urls = [];
   for(let i=0;i<5;i++) urls.push(($('url'+i).value||'').trim());
   VIDEOS = urls;
-  try{ localStorage.setItem('ia_gestos_videos', JSON.stringify(urls)); }catch(e){}
+  try { localStorage.setItem('ia_gestos_videos', JSON.stringify(urls)); } catch(e){}
+
+  const camUrl = ($('camUrl').value||'').trim();
+  CONFIG.camaraUrl = camUrl;
+  guardarConfig();
+
   $('config').classList.add('oculto');
   $('inicio').classList.remove('oculto');
-  if (VIDEOS[estado.indiceVideo]) cargarVideo(estado.indiceVideo);
 });
 
-document.getElementById('btnCancelar').addEventListener('click', ()=>{
+$('btnCancelar').addEventListener('click', ()=>{
   $('config').classList.add('oculto');
   $('inicio').classList.remove('oculto');
 });
 
-document.getElementById('btnAyuda').addEventListener('click', ()=>{
+$('btnAyuda').addEventListener('click', ()=>{
   $('ayuda').classList.toggle('visible');
 });
 
-document.getElementById('btnMute').addEventListener('click', (e)=>{
+$('btnMute').addEventListener('click', ()=>{
   video.muted = !video.muted;
-  e.target.textContent = video.muted ? '🔇' : '🔊';
+  actualizarBotonMute();
+});
+
+$('btnFull').addEventListener('click', toggleFullscreen);
+
+function actualizarBotonMute(){
+  $('btnMute').textContent = video.muted ? '🔇' : '🔊';
+}
+
+$('welcome').addEventListener('click', (e) => {
+  const item = e.target.closest('[data-video]');
+  const action = e.target.closest('[data-action]');
+  const gesto = e.target.closest('[data-gesto="corazon"]');
+  if (item){
+    ocultarBienvenida();
+    cargarVideo(parseInt(item.dataset.video));
+  } else if (action){
+    ocultarBienvenida();
+    const cmd = action.dataset.action;
+    if (cmd === 'playpause') togglePlay();
+    else if (cmd === 'siguiente') cargarVideo((estado.indiceVideo+1)%VIDEOS.length);
+    else if (cmd === 'fullscreen') toggleFullscreen();
+  } else if (gesto){
+    ocultarBienvenida();
+    mostrarCorazon();
+  }
 });
 
 function construirPanelConfig(){
-  const p=$('configPanel'); p.innerHTML='';
+  const p = $('configPanel'); p.innerHTML = '';
+
+  const lblCam = document.createElement('label');
+  lblCam.innerHTML = '📷 URL cámara externa (opcional)';
+  const inpCam = document.createElement('input');
+  inpCam.id = 'camUrl'; inpCam.type = 'url';
+  inpCam.placeholder = 'http://192.168.1.134:8080/video';
+  inpCam.value = CONFIG.camaraUrl || '';
+  lblCam.appendChild(inpCam);
+  p.appendChild(lblCam);
+
+  const hintCam = document.createElement('div');
+  hintCam.className = 'hint';
+  hintCam.textContent = 'Deja vacío para usar la cámara del dispositivo.';
+  p.appendChild(hintCam);
+
   for(let i=0;i<5;i++){
-    const lbl=document.createElement('label');
-    lbl.textContent='Video '+(i+1);
-    const inp=document.createElement('input');
-    inp.id='url'+i; inp.type='url';
-    inp.placeholder='video'+(i+1)+'.mp4';
-    inp.value=VIDEOS[i]||'';
+    const lbl = document.createElement('label');
+    lbl.textContent = '🎬 Video ' + (i+1);
+    const inp = document.createElement('input');
+    inp.id = 'url' + i; inp.type = 'url';
+    inp.placeholder = './vid' + (i+1) + '.mp4';
+    inp.value = VIDEOS[i] || '';
     lbl.appendChild(inp);
     p.appendChild(lbl);
   }
 }
 
+/* ═══════════════ ARRANQUE ═══════════════ */
+aplicarEfectos();
 ajustarCanvas();
+sincronizarUI();
+actualizarBotonFull();
+actualizarBotonMute();
 setEstado('Listo para iniciar');
 </script>
 </body>
