@@ -9,10 +9,16 @@
   :root {
     --verde: #38ffb0;
     --cian: #00d1ff;
-    --panel: rgba(6,14,24,.85);
+    --panel: rgba(6,14,24,.88);
     --pip-size: clamp(110px, 26vw, 240px);
     --pip-size-fs: clamp(80px, 14vw, 140px);
+    --accent-primary: var(--verde);
+    --accent-secondary: var(--cian);
   }
+  body.theme-amber { --verde: #ffb038; --cian: #ffdf00; }
+  body.theme-purple { --verde: #d138ff; --cian: #00d1ff; }
+  body.theme-cyan { --verde: #00d1ff; --cian: #38ffb0; }
+
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
   html, body { height: 100%; height: 100dvh; overflow: hidden; }
   body {
@@ -29,6 +35,7 @@
     border-radius: 14px; overflow: hidden;
     background: #000;
     box-shadow: 0 0 40px rgba(56,255,176,.12), inset 0 0 40px rgba(0,0,0,.5);
+    transition: box-shadow .3s ease;
   }
   #videoStage.loading { animation: videoFlash .7s ease-out; }
   @keyframes videoFlash {
@@ -57,7 +64,7 @@
   /* ═══ WELCOME ═══ */
   #welcome {
     position: absolute; inset: 0;
-    background: rgba(3,6,12,.94);
+    background: rgba(3,6,12,.95);
     display: flex; flex-direction: column; align-items: center;
     justify-content: center; gap: 14px; padding: 24px;
     z-index: 8; text-align: center; overflow: hidden;
@@ -124,6 +131,7 @@
     position: relative; z-index: 1;
     display: grid; grid-template-columns: repeat(2, 1fr);
     gap: 8px; max-width: 400px; width: 100%; margin-top: 10px;
+    max-height: 38vh; overflow-y: auto; padding-right: 2px;
   }
   .gestos-grid > div {
     background: rgba(6,14,24,.8);
@@ -141,7 +149,7 @@
   /* ═══ HUD ═══ */
   #hud {
     position: absolute; top: 12px; left: 12px;
-    display: flex; gap: 6px; flex-wrap: wrap; max-width: calc(100% - 180px);
+    display: flex; gap: 6px; flex-wrap: wrap; max-width: calc(100% - 210px);
     z-index: 15; pointer-events: none; font-size: 11px;
   }
   .chip {
@@ -152,14 +160,14 @@
 
   /* ═══ PROGRESO ═══ */
   #progreso {
-    position: absolute; top: 48px; left: 50%; transform: translateX(-50%);
+    position: absolute; top: 52px; left: 50%; transform: translateX(-50%);
     min-width: 190px; max-width: 85vw; background: var(--panel);
     border: 1px solid rgba(56,255,176,.4); border-radius: 10px; padding: 6px 12px;
     font-size: 11px; z-index: 15; display: none;
     box-shadow: 0 0 24px rgba(56,255,176,.25);
   }
   #progreso.visible { display: block; }
-  #progresoTexto { color: #e8f6ff; font-weight: 600; margin-bottom: 4px; }
+  #progresoTexto { color: #e8f6ff; font-weight: 600; margin-bottom: 4px; text-align: center; }
   #progresoBarra { height: 4px; background: #1a2f45; border-radius: 3px; overflow: hidden; }
   #progresoFill {
     height: 100%; background: linear-gradient(90deg, var(--verde), var(--cian));
@@ -229,8 +237,9 @@
   }
   .btn-flotante:active { transform: scale(.92); box-shadow: 0 0 20px rgba(56,255,176,.5); }
   #btnAyuda { right: 12px; top: 12px; font-size: 18px; font-weight: 700; }
-  #btnMute { right: 58px; top: 12px; }
-  #btnFull { right: 104px; top: 12px; font-size: 17px; }
+  #btnSound { right: 58px; top: 12px; }
+  #btnMute { right: 104px; top: 12px; }
+  #btnFull { right: 150px; top: 12px; font-size: 17px; }
   #btnRend { left: 12px; bottom: 12px; font-size: 18px; }
 
   /* ═══ AYUDA ═══ */
@@ -321,9 +330,119 @@
   }
   body.reduce-effects #progresoFill { transition: none; }
 
+  /* ═══ CIERRE: CORAZÓN HOLOGRÁFICO ═══ */
+  #celebracion {
+    position: fixed; inset: 0;
+    background: radial-gradient(circle at 50% 50%, rgba(56,255,176,.18) 0%, rgba(3,6,12,.97) 65%);
+    z-index: 100;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 0;
+    animation: celebFadeIn .55s ease-out;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    cursor: pointer;
+  }
+  #celebracion.oculto { display: none; }
+  @keyframes celebFadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  .holo-glow {
+    position: absolute;
+    width: 70vmin; height: 70vmin;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(56,255,176,.32) 0%, rgba(0,209,255,.12) 40%, transparent 70%);
+    animation: holoPulse 2.6s ease-in-out infinite;
+    pointer-events: none;
+    will-change: transform, opacity;
+  }
+  @keyframes holoPulse {
+    0%, 100% { transform: scale(1); opacity: .75; }
+    50%      { transform: scale(1.18); opacity: 1; }
+  }
+
+  .corazon-holo {
+    width: clamp(190px, 46vw, 340px);
+    height: clamp(190px, 46vw, 340px);
+    position: relative; z-index: 1;
+    animation: latido 1.4s ease-in-out infinite .9s;
+    will-change: transform;
+  }
+  .trazo-corazon {
+    stroke-dasharray: 320;
+    stroke-dashoffset: 320;
+    animation: trazarCorazon 1.9s ease-out forwards;
+  }
+  @keyframes trazarCorazon {
+    0%   { stroke-dashoffset: 320; opacity: 0; }
+    10%  { opacity: 1; }
+    100% { stroke-dashoffset: 0; opacity: 1; }
+  }
+  @keyframes latido {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.06); }
+  }
+
+  .texto-celebracion {
+    margin-top: 20px; text-align: center;
+    font-size: clamp(16px, 4.2vw, 26px);
+    font-weight: 700; line-height: 1.25;
+    position: relative; z-index: 1;
+    padding: 0 24px;
+    letter-spacing: .3px;
+  }
+  .texto-celebracion .linea-1,
+  .texto-celebracion .linea-2 {
+    background: linear-gradient(135deg, #38ffb0, #00d1ff 60%, #ff4d9d);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+    opacity: 0;
+    animation: fadeUp .85s cubic-bezier(.2,.7,.2,1) forwards;
+  }
+  .texto-celebracion .linea-1 { animation-delay: 1.7s; }
+  .texto-celebracion .linea-2 { animation-delay: 2.15s; font-size: 1.18em; margin-top: 4px; }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(22px); filter: blur(4px); }
+    to   { opacity: 1; transform: translateY(0);    filter: blur(0); }
+  }
+
+  .sparkles { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+  .sparkles span {
+    position: absolute;
+    font-size: clamp(16px, 3vw, 24px);
+    opacity: 0;
+    animation: brillar 2.8s ease-in-out infinite;
+    will-change: transform, opacity;
+  }
+  .sparkles span:nth-child(1) { top: 15%; left: 20%; animation-delay: .4s; }
+  .sparkles span:nth-child(2) { top: 26%; right: 22%; animation-delay: .9s; }
+  .sparkles span:nth-child(3) { bottom: 25%; left: 18%; animation-delay: 1.4s; }
+  .sparkles span:nth-child(4) { bottom: 16%; right: 24%; animation-delay: 1.9s; }
+  .sparkles span:nth-child(5) { top: 46%; right: 10%; animation-delay: .6s; }
+  @keyframes brillar {
+    0%, 100% { opacity: 0; transform: scale(.4) rotate(0deg); }
+    50%      { opacity: 1; transform: scale(1.15) rotate(180deg); }
+  }
+
+  .tap-cerrar {
+    position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
+    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    color: #5a8ba8; opacity: 0;
+    animation: fadeUp .8s ease-out 3s forwards;
+    pointer-events: none;
+  }
+
+  body.reduce-effects .holo-glow,
+  body.reduce-effects .corazon-holo,
+  body.reduce-effects .sparkles span { animation: none !important; }
+  body.reduce-effects .trazo-corazon { animation: none !important; stroke-dashoffset: 0 !important; }
+  body.reduce-effects .texto-celebracion .linea-1,
+  body.reduce-effects .texto-celebracion .linea-2 { animation: none !important; opacity: 1 !important; }
+
   @media (min-width: 768px) {
     #videoStage { inset: 12px; border-radius: 20px; }
-    #hud { font-size: 13px; top: 20px; left: 20px; }
+    #hud { font-size: 13px; top: 20px; left: 20px; max-width: calc(100% - 240px); }
     #camPiP { right: 20px; bottom: 20px; border-radius: 18px; }
     #progreso { top: 60px; }
     .pantalla h1 { font-size: 24px; }
@@ -361,6 +480,7 @@
       <div data-action="playpause"><span class="emoji">✊✊</span><div><span class="label">Play / Pausa</span><span class="hint">Puño</span></div></div>
       <div data-action="siguiente"><span class="emoji">👍👍</span><div><span class="label">Siguiente</span><span class="hint">Pulgar arriba</span></div></div>
       <div data-action="fullscreen"><span class="emoji">🤟🤟</span><div><span class="label">Pantalla completa</span><span class="hint">"Te amo"</span></div></div>
+      <div data-gesto="corazon"><span class="emoji">💚</span><div><span class="label">Corazón · Cierre</span><span class="hint">Juntar índices y pulgares</span></div></div>
     </div>
   </div>
 
@@ -375,10 +495,11 @@
     <div id="progresoBarra"><div id="progresoFill"></div></div>
   </div>
 
-  <button class="btn-flotante" id="btnAyuda">?</button>
-  <button class="btn-flotante" id="btnMute">🔇</button>
-  <button class="btn-flotante" id="btnFull">🔳</button>
-  <button class="btn-flotante" id="btnRend">⚡</button>
+  <button class="btn-flotante" id="btnAyuda" title="Ayuda de gestos">?</button>
+  <button class="btn-flotante" id="btnSound" title="Sonido activado">🔊</button>
+  <button class="btn-flotante" id="btnMute" title="Audio de video">🔇</button>
+  <button class="btn-flotante" id="btnFull" title="Pantalla completa">🔳</button>
+  <button class="btn-flotante" id="btnRend" title="Rendimiento">⚡</button>
 
   <div id="ayuda">
     <div class="titulo">🙌 Gestos (2 manos)</div>
@@ -390,6 +511,7 @@
     <div><b>✊✊</b> Puño → Play/Pausa</div>
     <div><b>👍👍</b> Pulgar arriba → Siguiente</div>
     <div><b>🤟🤟</b> "Te amo" → Pantalla completa</div>
+    <div><b>💚💚</b> Corazón → Cierre ✨</div>
     <div style="margin-top:6px;color:#5a8ba8;font-size:10px;">Ambas manos deben mostrar el mismo gesto</div>
   </div>
 
@@ -410,8 +532,8 @@
   </div>
 
   <div id="rendimiento" class="pantalla oculto">
-    <h1>⚡ Rendimiento</h1>
-    <p>Elige un preset rápido o ajusta manualmente.</p>
+    <h1>⚡ Rendimiento y Temas</h1>
+    <p>Elige un preset rápido o personaliza los parámetros.</p>
 
     <div id="presetsGrid">
       <button data-preset="minimo">Mínimo</button>
@@ -424,6 +546,15 @@
     <div id="rendInfo"></div>
 
     <div id="rendPanel">
+      <label>Tema de Color
+        <select id="selTema">
+          <option value="default">Verde Ciber (Default)</option>
+          <option value="cyan">Cian Tecnológico</option>
+          <option value="amber">Ámbar Matrix</option>
+          <option value="purple">Violeta Holográfico</option>
+        </select>
+      </label>
+
       <label>Resolución de procesamiento
         <select id="selResolucion">
           <option value="128x96">128×96 · más rápido</option>
@@ -495,9 +626,96 @@
     <button id="btnCancelar" class="sec">Cancelar</button>
   </div>
 
+  <!-- ═══ CIERRE: CORAZÓN HOLOGRÁFICO ═══ -->
+  <div id="celebracion" class="oculto" role="dialog" aria-label="Gracias por visitar nuestro stand">
+    <div class="holo-glow"></div>
+    <svg class="corazon-holo" viewBox="0 0 100 100" aria-hidden="true">
+      <defs>
+        <linearGradient id="gradCorazon" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="var(--verde)"/>
+          <stop offset="55%" stop-color="var(--cian)"/>
+          <stop offset="100%" stop-color="#ff4d9d"/>
+        </linearGradient>
+        <filter id="glowHolo" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="1.6" result="blur"/>
+          <feMerge>
+            <feMergeNode in="blur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+      </defs>
+      <path class="trazo-corazon"
+            d="M50 88 C 20 65, 8 45, 15 30 C 22 15, 40 15, 50 30 C 60 15, 78 15, 85 30 C 92 45, 80 65, 50 88 Z"
+            fill="none" stroke="url(#gradCorazon)" stroke-width="2.2"
+            stroke-linecap="round" filter="url(#glowHolo)"/>
+    </svg>
+    <div class="texto-celebracion">
+      <div class="linea-1">gracias por visitar</div>
+      <div class="linea-2">nuestro stand ✨</div>
+    </div>
+    <div class="sparkles" aria-hidden="true">
+      <span>✨</span><span>✨</span><span>✨</span><span>✨</span><span>✨</span>
+    </div>
+    <div class="tap-cerrar">toca para cerrar</div>
+  </div>
+
 </div>
 
 <script>
+/* ═══════════════ AUDIO SINTETIZADO (SCI-FI) ═══════════════ */
+let audioCtx = null;
+let sonidoActivo = true;
+
+function initAudio() {
+  if (!audioCtx) {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (AudioContext) audioCtx = new AudioContext();
+  }
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+}
+
+function reproducirSonido(tipo) {
+  if (!sonidoActivo) return;
+  try {
+    initAudio();
+    if (!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    const ahora = audioCtx.currentTime;
+
+    if (tipo === 'click') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(580, ahora);
+      osc.frequency.exponentialRampToValueAtTime(880, ahora + 0.06);
+      gain.gain.setValueAtTime(0.08, ahora);
+      gain.gain.exponentialRampToValueAtTime(0.001, ahora + 0.08);
+      osc.start(ahora);
+      osc.stop(ahora + 0.08);
+    } else if (tipo === 'success') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(440, ahora);
+      osc.frequency.setValueAtTime(660, ahora + 0.08);
+      osc.frequency.setValueAtTime(880, ahora + 0.16);
+      gain.gain.setValueAtTime(0.1, ahora);
+      gain.gain.exponentialRampToValueAtTime(0.001, ahora + 0.3);
+      osc.start(ahora);
+      osc.stop(ahora + 0.3);
+    } else if (tipo === 'boot') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(300, ahora);
+      osc.frequency.exponentialRampToValueAtTime(1200, ahora + 0.4);
+      gain.gain.setValueAtTime(0.12, ahora);
+      gain.gain.exponentialRampToValueAtTime(0.001, ahora + 0.45);
+      osc.start(ahora);
+      osc.stop(ahora + 0.45);
+    }
+  } catch(e) {}
+}
+
 /* ═══════════════ CONFIGURACIÓN ═══════════════ */
 const VIDEOS_DEFAULT = ['./vid1.mp4', './vid2.mp4', './vid3.mp4', './vid4.mp4', './vid5.mp4'];
 let VIDEOS = VIDEOS_DEFAULT.slice();
@@ -514,62 +732,24 @@ const COMANDOS = {
   'anular_indice_medio_menique_pulgar': { tipo:'video',      valor:4, nombre:'🖐️ Video 5' },
   'nada':                               { tipo:'playpause',           nombre:'✊ Play/Pausa' },
   'pulgar_arriba':                      { tipo:'siguiente',           nombre:'👍 Siguiente' },
-  'indice_menique_pulgar':              { tipo:'fullscreen',          nombre:'🤟 Pantalla completa' }
+  'indice_menique_pulgar':              { tipo:'fullscreen',          nombre:'🤟 Pantalla completa' },
+  'corazon':                            { tipo:'celebracion',         nombre:'💚 Corazón' }
 };
 
 const PRESETS = {
-  minimo: {
-    procW: 128, procH: 96,
-    camWidth: 320, camHeight: 240,
-    maxFps: 8,
-    modelComplexity: 0,
-    overlayQuality: 'off',
-    reduceEffects: true,
-    duracionEstableMs: 900,
-    minFramesEstables: 3,
-    canvasScale: 0.6
-  },
-  bajo: {
-    procW: 160, procH: 120,
-    camWidth: 320, camHeight: 240,
-    maxFps: 12,
-    modelComplexity: 0,
-    overlayQuality: 'low',
-    reduceEffects: true,
-    duracionEstableMs: 750,
-    minFramesEstables: 3,
-    canvasScale: 0.8
-  },
-  medio: {
-    procW: 256, procH: 192,
-    camWidth: 480, camHeight: 360,
-    maxFps: 20,
-    modelComplexity: 0,
-    overlayQuality: 'full',
-    reduceEffects: false,
-    duracionEstableMs: 600,
-    minFramesEstables: 3,
-    canvasScale: 1
-  },
-  alto: {
-    procW: 320, procH: 240,
-    camWidth: 640, camHeight: 480,
-    maxFps: 30,
-    modelComplexity: 0,
-    overlayQuality: 'full',
-    reduceEffects: false,
-    duracionEstableMs: 500,
-    minFramesEstables: 4,
-    canvasScale: 1
-  }
+  minimo: { procW: 128, procH: 96, camWidth: 320, camHeight: 240, maxFps: 8, modelComplexity: 0, overlayQuality: 'off', reduceEffects: true, duracionEstableMs: 900, minFramesEstables: 2, canvasScale: 0.6 },
+  bajo:   { procW: 160, procH: 120, camWidth: 320, camHeight: 240, maxFps: 12, modelComplexity: 0, overlayQuality: 'low', reduceEffects: true, duracionEstableMs: 750, minFramesEstables: 3, canvasScale: 0.8 },
+  medio:  { procW: 256, procH: 192, camWidth: 480, camHeight: 360, maxFps: 20, modelComplexity: 0, overlayQuality: 'full', reduceEffects: false, duracionEstableMs: 600, minFramesEstables: 3, canvasScale: 1 },
+  alto:   { procW: 320, procH: 240, camWidth: 640, camHeight: 480, maxFps: 30, modelComplexity: 0, overlayQuality: 'full', reduceEffects: false, duracionEstableMs: 500, minFramesEstables: 4, canvasScale: 1 }
 };
 
 const CONFIG = {
   preset: 'auto',
+  tema: 'default',
   duracionEstableMs: 600,
   minFramesEstables: 3,
   cooldownMs: 1200,
-  framesReset: 8,
+  framesReset: 12, // Búfer de gracia aumentado para evitar falsos resets
   procW: 256, procH: 192,
   camWidth: 480, camHeight: 360,
   maxFps: 20,
@@ -584,16 +764,14 @@ const CONFIG = {
   camaraUrl: ''
 };
 
-/* Cargar config guardada */
 try {
-  const sc = localStorage.getItem('ia_gestos_config_v3');
+  const sc = localStorage.getItem('ia_gestos_config_v4');
   if (sc) {
     const o = JSON.parse(sc);
     Object.keys(o).forEach(k => { if (k in CONFIG) CONFIG[k] = o[k]; });
   }
 } catch(e) {}
 
-/* Detectar capacidad del dispositivo para preset inicial */
 function detectarCapacidad() {
   const cores = navigator.hardwareConcurrency || 2;
   const mem = navigator.deviceMemory || 2;
@@ -602,18 +780,14 @@ function detectarCapacidad() {
   if (cores <= 6 || mem <= 4) return 'medio';
   return 'alto';
 }
-if (CONFIG.preset === 'auto') {
-  /* Primera vez: elegimos por hardware. Si después Auto detecta en runtime, se ajusta */
-}
 
-/* ═══════════════ ESTADO ═══════════════ */
 const estado = {
   hands:null, corriendo:false, indiceVideo:0,
   gestoActual:null, gestoStartTime:0, framesEstables:0,
   esperandoNeutro:false, comandoEjecutado:null,
   framesSinManos:0, ultimaAccion:0, esFullscreen:false,
   welcomeVisible:false, activeCam: null, enviandoFrame: false,
-  fpsSamples: []
+  fpsSamples: [], ultimoCorazon: 0, _timerCorazon: null
 };
 
 const $ = id => document.getElementById(id);
@@ -653,9 +827,15 @@ camPiP.addEventListener('transitionend', (e) => {
   if (e.propertyName === 'width') ajustarCanvas();
 });
 
-/* ═══════════════ APLICAR PRESET / CONFIG ═══════════════ */
-function aplicarEfectos() {
-  document.body.classList.toggle('reduce-effects', !!CONFIG.reduceEffects);
+/* ═══════════════ TEMAS Y EFECTOS ═══════════════ */
+function aplicarTema() {
+  document.body.className = '';
+  if (CONFIG.tema && CONFIG.tema !== 'default') {
+    document.body.classList.add('theme-' + CONFIG.tema);
+  }
+  if (CONFIG.reduceEffects) {
+    document.body.classList.add('reduce-effects');
+  }
 }
 
 function aplicarPreset(nombre, silencioso) {
@@ -666,11 +846,11 @@ function aplicarPreset(nombre, silencioso) {
       const p = PRESETS[det];
       Object.assign(CONFIG, p);
       CONFIG.preset = 'auto';
-      aplicarEfectos();
+      aplicarTema();
       actualizarProcCanvas();
       ajustarCanvas();
       const info = $('rendInfo');
-      if (info) info.textContent = 'Auto: hardware detectado → ' + det + '. Se ajustará tras medir FPS reales.';
+      if (info) info.textContent = 'Auto: hardware detectado → ' + det + '.';
       sincronizarUI();
       guardarConfig();
     }
@@ -680,7 +860,7 @@ function aplicarPreset(nombre, silencioso) {
   if (!p) return;
   Object.assign(CONFIG, p);
   CONFIG.preset = nombre;
-  aplicarEfectos();
+  aplicarTema();
   actualizarProcCanvas();
   ajustarCanvas();
   if (!silencioso) {
@@ -692,10 +872,9 @@ function aplicarPreset(nombre, silencioso) {
 }
 
 function guardarConfig() {
-  try { localStorage.setItem('ia_gestos_config_v3', JSON.stringify(CONFIG)); } catch(e) {}
+  try { localStorage.setItem('ia_gestos_config_v4', JSON.stringify(CONFIG)); } catch(e) {}
 }
 
-/* ═══════════════ AUTO-MEDICIÓN ═══════════════ */
 let autoTimer = null;
 function iniciarAutoDeteccion() {
   if (autoTimer) clearInterval(autoTimer);
@@ -707,22 +886,17 @@ function iniciarAutoDeteccion() {
     if (estado.fpsSamples.length >= 5) {
       clearInterval(autoTimer); autoTimer = null;
       const prom = estado.fpsSamples.reduce((a,b)=>a+b,0) / estado.fpsSamples.length;
-      let elegido;
-      if (prom < 6) elegido = 'minimo';
-      else if (prom < 10) elegido = 'bajo';
-      else if (prom < 18) elegido = 'medio';
-      else elegido = 'alto';
-      const mensaje = 'Auto: ' + Math.round(prom) + ' fps medidos → ajustado a "' + elegido + '".';
+      let elegido = prom < 6 ? 'minimo' : prom < 10 ? 'bajo' : prom < 18 ? 'medio' : 'alto';
       aplicarPreset(elegido, true);
       CONFIG.preset = 'auto';
       guardarConfig();
       const info = $('rendInfo');
-      if (info) info.textContent = mensaje;
+      if (info) info.textContent = 'Auto: ' + Math.round(prom) + ' fps medidos → ajustado a "' + elegido + '".';
     }
   }, 1000);
 }
 
-/* ═══════════════ PROYECCIÓN / DIBUJO ═══════════════ */
+/* ═══════════════ PROYECCIÓN Y ANÁLISIS DE MANOS ═══════════════ */
 function proy(lm){
   const src = estado.activeCam || cam;
   const vw = src.videoWidth || src.naturalWidth || 640;
@@ -764,7 +938,35 @@ function analizarMano(lm){
   };
 }
 
-/* ═══════════════ LÓGICA DE GESTOS (basada en TIEMPO) ═══════════════ */
+function detectarCorazon(manos){
+  if (!manos || manos.length < 2) return false;
+  const m1 = manos[0], m2 = manos[1];
+  const size1 = dist2D(m1[0], m1[9]);
+  const size2 = dist2D(m2[0], m2[9]);
+  const avgSize = (size1 + size2) / 2;
+  if (avgSize < 0.01) return false;
+
+  const i1 = m1[8], i2 = m2[8];
+  const t1 = m1[4], t2 = m2[4];
+
+  const dIdxIdx     = dist2D(i1, i2);
+  const dThumbThumb = dist2D(t1, t2);
+  const dWrists     = dist2D(m1[0], m2[0]);
+
+  const manosJuntas = dWrists < avgSize * 3.6;
+  const cercaIdx    = dIdxIdx     < avgSize * 0.65;
+  const cercaThumb  = dThumbThumb < avgSize * 0.65;
+
+  const avgIdxY   = (i1.y + i2.y) / 2;
+  const avgThumbY = (t1.y + t2.y) / 2;
+  const apuntaArriba = avgIdxY < avgThumbY - avgSize * 0.12;
+  const avgWristY = (m1[0].y + m2[0].y) / 2;
+  const manosArriba = avgIdxY < avgWristY && avgThumbY < avgWristY;
+
+  return cercaIdx && cercaThumb && manosJuntas && apuntaArriba && manosArriba;
+}
+
+/* ═══════════════ LÓGICA DE GESTOS Y ESTABILIDAD ═══════════════ */
 function procesarPatron(patron){
   if (!patron){
     estado.gestoActual = null;
@@ -793,7 +995,13 @@ function procesarPatron(patron){
   if (framesOk && timeOk){
     const cmd = COMANDOS[patron];
     if (cmd && (ahora - estado.ultimaAccion) > CONFIG.cooldownMs){
+      if (cmd.tipo === 'celebracion') {
+        if (ahora - (estado.ultimoCorazon || 0) < 20000) return;
+        estado.ultimoCorazon = ahora;
+        ocultarBienvenida();
+      }
       if (estado.welcomeVisible && cmd.tipo === 'video') ocultarBienvenida();
+      reproducirSonido('success');
       ejecutarComando(cmd);
       estado.ultimaAccion = ahora;
       estado.esperandoNeutro = true;
@@ -809,33 +1017,26 @@ function ejecutarComando(cmd){
   else if (cmd.tipo==='playpause') togglePlay();
   else if (cmd.tipo==='siguiente') cargarVideo((estado.indiceVideo+1)%VIDEOS.length);
   else if (cmd.tipo==='fullscreen') toggleFullscreen();
+  else if (cmd.tipo==='celebracion') mostrarCorazon();
 }
 
 async function toggleFullscreen(){
-  /* ¿Salir? Si está en fullscreen real O en modo teatro */
   if (document.fullscreenElement || estado.esFullscreen) {
     if (document.fullscreenElement) {
       try { await document.exitFullscreen(); } catch(e){}
     }
-    /* Si no estaba en fullscreen real (solo teatro), forzamos salida del teatro */
-    if (!document.fullscreenElement) {
-      estado.esFullscreen = false;
-      camPiP.classList.remove('fullscreen');
-      actualizarBotonFull();
-      setTimeout(ajustarCanvas, 380);
-    }
+    estado.esFullscreen = false;
+    camPiP.classList.remove('fullscreen');
+    actualizarBotonFull();
+    setTimeout(ajustarCanvas, 380);
     return;
   }
-
-  /* Entrar */
   try {
     const el = document.documentElement;
     if (el.requestFullscreen) await el.requestFullscreen({ navigationUI: 'hide' });
     else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
     else throw new Error('API no disponible');
   } catch (e) {
-    /* Fallback (iOS Safari, o gesto sin permiso): solo modo "teatro" del PiP */
-    console.warn('Pantalla completa no disponible:', e);
     estado.esFullscreen = true;
     camPiP.classList.add('fullscreen');
     actualizarBotonFull();
@@ -869,7 +1070,7 @@ function ocultarBienvenida(){
   $('welcome').classList.add('oculto');
 }
 
-/* ═══════════════ VIDEO ═══════════════ */
+/* ═══════════════ REPRODUCCIÓN DE VIDEO ═══════════════ */
 function cargarVideo(idx){
   if (idx<0 || idx>=VIDEOS.length) return;
   const url = (VIDEOS[idx]||'').trim();
@@ -908,10 +1109,9 @@ function ocultarMensaje(){
   $('mensajeVideo').classList.add('oculto'); video.style.visibility='visible';
 }
 
-/* ═══════════════ DIBUJO OVERLAY ═══════════════ */
+/* ═══════════════ RENDERIZADO OVERLAY ═══════════════ */
 const CONEXIONES=[[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],
   [10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[13,17],[17,18],[18,19],[19,20],[0,17]];
-const COLORES=['#38ffb0','#00d1ff'];
 
 function rrect(x,y,w,h,r){
   ctx.beginPath(); ctx.moveTo(x+r,y);
@@ -919,19 +1119,18 @@ function rrect(x,y,w,h,r){
   ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
 }
 
-function dibujarMano(lm,idx,esActiva,patron){
+function dibujarMano(lm,idx,esActiva,patron,esCorazon){
   if (CONFIG.overlayQuality === 'off') return;
-
-  const color = COLORES[idx%COLORES.length];
+  const color = esCorazon ? '#ff4d9d' : (idx === 0 ? 'var(--verde)' : 'var(--cian)');
   const pts = lm.map(proy);
   const gr = Math.max(1.5, Math.round(cw/180));
   const rad = Math.max(1.8, gr*1.4);
   const low = (CONFIG.overlayQuality === 'low');
 
-  /* Conexiones: solo en full */
   if (!low){
     ctx.lineCap='round'; ctx.lineJoin='round';
-    ctx.strokeStyle=color; ctx.lineWidth=gr;
+    ctx.strokeStyle=getComputedStyle(document.body).getPropertyValue('--verde') || '#38ffb0';
+    ctx.lineWidth=gr;
     ctx.globalAlpha = esActiva ? 0.9 : 0.35;
     ctx.beginPath();
     for(let i=0;i<CONEXIONES.length;i++){
@@ -942,11 +1141,9 @@ function dibujarMano(lm,idx,esActiva,patron){
     ctx.stroke();
   }
 
-  /* Puntos (siempre en low y full) */
   ctx.globalAlpha = esActiva ? 1 : 0.45;
   ctx.fillStyle = color;
   if (low){
-    /* En low: solo yema de los dedos + muñeca (5 puntos) */
     const idxs = [0, 8, 12, 16, 20];
     for (let k=0;k<idxs.length;k++){
       const p = pts[idxs[k]];
@@ -960,12 +1157,11 @@ function dibujarMano(lm,idx,esActiva,patron){
     }
   }
 
-  /* Etiqueta solo en full */
   if (!low && cw > 120){
     let minY=Infinity, sx=0;
     for(const p of pts) if(p.y<minY){ minY=p.y; sx=p.x; }
     const cmd = COMANDOS[patron];
-    const txt = cmd ? cmd.nombre : (patron === 'nada' ? '✊' : '· ' + (patron||'—'));
+    const txt = esCorazon ? '💚 Corazón' : (cmd ? cmd.nombre : (patron === 'nada' ? '✊' : '· ' + (patron||'—')));
     etiqueta(txt, sx, minY, color);
   }
   ctx.globalAlpha=1;
@@ -980,13 +1176,36 @@ function etiqueta(texto,x,y,color){
   let bx = Math.max(2, Math.min(cw-w-2, x-w/2));
   let by = y-h-6; if (by<2) by = y+8;
 
-  ctx.fillStyle = 'rgba(4,10,18,.85)';
+  ctx.fillStyle = 'rgba(4,10,18,.88)';
   rrect(bx,by,w,h,5); ctx.fill();
   ctx.strokeStyle = color; ctx.lineWidth = 1;
   rrect(bx,by,w,h,5); ctx.stroke();
   ctx.fillStyle = color; ctx.textAlign='left'; ctx.textBaseline='middle';
   ctx.fillText(texto, bx+pad, by+h/2);
 }
+
+/* ═══════════════ CELEBRACIÓN CIERRE ═══════════════ */
+function mostrarCorazon(){
+  const el = $('celebracion');
+  if (!el) return;
+  const path = el.querySelector('.trazo-corazon');
+  if (path) {
+    path.style.animation = 'none';
+    void path.offsetHeight;
+    path.style.animation = '';
+  }
+  el.classList.remove('oculto');
+  clearTimeout(estado._timerCorazon);
+  estado._timerCorazon = setTimeout(ocultarCorazon, 9000);
+}
+
+function ocultarCorazon(){
+  const el = $('celebracion');
+  if (el) el.classList.add('oculto');
+  clearTimeout(estado._timerCorazon);
+}
+
+$('celebracion').addEventListener('click', ocultarCorazon);
 
 /* ═══════════════ RESULTADOS MEDIAPIPE ═══════════════ */
 function onResults(res){
@@ -1000,15 +1219,11 @@ function onResults(res){
 
   if (!cw || !ch) ajustarCanvas();
 
-  /* Limpiar overlay (si está off igual limpiamos una vez) */
   if (CONFIG.overlayQuality !== 'off') {
     ctx.clearRect(0,0,cw,ch);
-  } else {
-    /* Solo limpiar si hay algo dibujado */
-    if (canvas._dirty) {
-      ctx.clearRect(0,0,cw,ch);
-      canvas._dirty = false;
-    }
+  } else if (canvas._dirty) {
+    ctx.clearRect(0,0,cw,ch);
+    canvas._dirty = false;
   }
 
   const manos = res.multiHandLandmarks || [];
@@ -1016,8 +1231,14 @@ function onResults(res){
 
   let patronCombinado = null;
   let coinciden = false;
+  let esCorazon = false;
+
   if (manos.length >= 2){
-    if (analisis[0].patron === analisis[1].patron){
+    if (detectarCorazon(manos)){
+      patronCombinado = 'corazon';
+      coinciden = true;
+      esCorazon = true;
+    } else if (analisis[0].patron === analisis[1].patron){
       patronCombinado = analisis[0].patron;
       coinciden = true;
     }
@@ -1025,7 +1246,7 @@ function onResults(res){
 
   if (CONFIG.overlayQuality !== 'off') {
     for (let i=0;i<manos.length;i++){
-      dibujarMano(manos[i], i, coinciden, analisis[i].patron);
+      dibujarMano(manos[i], i, coinciden, analisis[i].patron, esCorazon);
     }
     if (manos.length) canvas._dirty = true;
   }
@@ -1049,9 +1270,7 @@ function onResults(res){
   camPiP.classList.remove('waiting');
 
   const cmd = patronCombinado ? COMANDOS[patronCombinado] : null;
-  const txtGesto = coinciden
-    ? (cmd ? cmd.nombre : '· '+patronCombinado)
-    : '❓ Gestos distintos';
+  const txtGesto = coinciden ? (cmd ? cmd.nombre : '· '+patronCombinado) : '❓ Gestos distintos';
   if (lastHudGesto !== txtGesto) { $('gestoActual').textContent = txtGesto; lastHudGesto = txtGesto; }
 
   const estable = coinciden && cmd && estado.framesEstables >= 2 && !estado.esperandoNeutro;
@@ -1107,10 +1326,9 @@ function cargarMediaPipe(){
   return handsPromise;
 }
 
-/* ═══════════════ BUCLE PRINCIPAL (con límite de FPS) ═══════════════ */
+/* ═══════════════ BUCLE DE PROCESAMIENTO ═══════════════ */
 async function bucle(){
   if (!estado.corriendo) return;
-
   const ahora = performance.now();
   const minInterval = 1000 / Math.max(1, CONFIG.maxFps);
 
@@ -1130,19 +1348,18 @@ async function bucle(){
       estado.enviandoFrame = false;
     }
   }
-
   if (estado.corriendo) requestAnimationFrame(bucle);
 }
 
-/* ═══════════════ INICIO ═══════════════ */
+/* ═══════════════ INICIO DE CÁMARA ═══════════════ */
 async function iniciar(){
   const btn = $('btnIniciar');
   btn.disabled = true; btn.textContent = 'Iniciando...'; setError('');
-
   cam.style.display = 'block';
   camImg.style.display = 'none';
 
   try {
+    reproducirSonido('boot');
     setEstado('1/4 · Cargando MediaPipe...');
     await cargarMediaPipe();
 
@@ -1154,21 +1371,18 @@ async function iniciar(){
 
       await new Promise((resolve, reject) => {
         camImg.onload = resolve;
-        camImg.onerror = () => reject(new Error('Error al cargar el stream. Revisa que la URL sea HTTP y termine en /video'));
+        camImg.onerror = () => reject(new Error('Error al cargar la cámara externa. Verifica la URL.'));
         setTimeout(() => reject(new Error('Timeout: la cámara externa no responde.')), 10000);
       });
-
       estado.activeCam = camImg;
     } else {
       setEstado('2/4 · Solicitando cámara...');
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
-        throw new Error('Tu navegador no soporta cámara. Necesitas HTTPS o localhost.');
+        throw new Error('Tu navegador no soporta cámara (requiere HTTPS o localhost).');
       }
-
       if (cam.srcObject){
         cam.srcObject.getTracks().forEach(t => t.stop());
       }
-
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           width: { ideal: CONFIG.camWidth },
@@ -1178,7 +1392,6 @@ async function iniciar(){
         audio: false
       });
       cam.srcObject = stream;
-
       await new Promise((resolve) => {
         if (cam.readyState >= 2) return resolve();
         cam.onloadeddata = resolve;
@@ -1217,8 +1430,6 @@ async function iniciar(){
     $('inicio').classList.add('oculto');
     mostrarBienvenida();
     bucle();
-
-    /* Auto preset: medir FPS reales */
     iniciarAutoDeteccion();
 
   } catch(e){
@@ -1231,22 +1442,16 @@ async function iniciar(){
 
 $('btnIniciar').addEventListener('click', iniciar);
 
-/* ═══════════════ APLICAR CAMBIOS DE RENDIMIENTO ═══════════════ */
+/* ═══════════════ RENDIMIENTO Y CONFIGURACIÓN UI ═══════════════ */
 function sincronizarUI(){
-  const el = document.getElementById('selResolucion');
-  if (el) el.value = CONFIG.procW + 'x' + CONFIG.procH;
-  const f = document.getElementById('selFps');
-  if (f) f.value = String(CONFIG.maxFps);
-  const ov = document.getElementById('selOverlay');
-  if (ov) ov.value = CONFIG.overlayQuality;
-  const mo = document.getElementById('selModelo');
-  if (mo) mo.value = String(CONFIG.modelComplexity);
-  const ca = document.getElementById('selCam');
-  if (ca) ca.value = CONFIG.camWidth + 'x' + CONFIG.camHeight;
-  const ti = document.getElementById('selTiempo');
-  if (ti) ti.value = String(CONFIG.duracionEstableMs);
-  const ef = document.getElementById('chkEfectos');
-  if (ef) ef.checked = !!CONFIG.reduceEffects;
+  const el = $('selResolucion'); if (el) el.value = CONFIG.procW + 'x' + CONFIG.procH;
+  const f = $('selFps'); if (f) f.value = String(CONFIG.maxFps);
+  const ov = $('selOverlay'); if (ov) ov.value = CONFIG.overlayQuality;
+  const mo = $('selModelo'); if (mo) mo.value = String(CONFIG.modelComplexity);
+  const ca = $('selCam'); if (ca) ca.value = CONFIG.camWidth + 'x' + CONFIG.camHeight;
+  const ti = $('selTiempo'); if (ti) ti.value = String(CONFIG.duracionEstableMs);
+  const ef = $('chkEfectos'); if (ef) ef.checked = !!CONFIG.reduceEffects;
+  const tm = $('selTema'); if (tm) tm.value = CONFIG.tema || 'default';
 
   document.querySelectorAll('#presetsGrid button').forEach(b => {
     b.classList.toggle('activo', b.dataset.preset === CONFIG.preset);
@@ -1257,7 +1462,6 @@ function leerUIRendimiento(){
   const res = $('selResolucion').value.split('x');
   CONFIG.procW = parseInt(res[0], 10);
   CONFIG.procH = parseInt(res[1], 10);
-
   CONFIG.maxFps = parseInt($('selFps').value, 10);
   CONFIG.overlayQuality = $('selOverlay').value;
   CONFIG.modelComplexity = parseInt($('selModelo').value, 10);
@@ -1271,15 +1475,14 @@ function leerUIRendimiento(){
 
   CONFIG.duracionEstableMs = parseInt($('selTiempo').value, 10);
   CONFIG.reduceEffects = $('chkEfectos').checked;
-
-  /* Aplicar */
+  CONFIG.tema = $('selTema').value;
   CONFIG.preset = 'custom';
+
   actualizarProcCanvas();
-  aplicarEfectos();
+  aplicarTema();
   ajustarCanvas();
   guardarConfig();
 
-  /* Actualizar Hands si está corriendo */
   if (estado.hands){
     try {
       estado.hands.setOptions({
@@ -1288,14 +1491,12 @@ function leerUIRendimiento(){
         minDetectionConfidence: CONFIG.minDetectionConfidence,
         minTrackingConfidence: CONFIG.minTrackingConfidence
       });
-    } catch(e){ console.warn(e); }
+    } catch(e){}
   }
 
-  /* Si cambió la resolución de cámara y está corriendo, reiniciar cámara */
   if (camCambio && estado.corriendo && estado.activeCam === cam){
     reiniciarCamaraSolo();
   }
-
   sincronizarUI();
 }
 
@@ -1303,11 +1504,7 @@ async function reiniciarCamaraSolo(){
   try {
     if (cam.srcObject) cam.srcObject.getTracks().forEach(t => t.stop());
     const stream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        width: { ideal: CONFIG.camWidth },
-        height: { ideal: CONFIG.camHeight },
-        frameRate: { ideal: 30, max: 30 }
-      },
+      video: { width: { ideal: CONFIG.camWidth }, height: { ideal: CONFIG.camHeight }, frameRate: { ideal: 30, max: 30 } },
       audio: false
     });
     cam.srcObject = stream;
@@ -1320,29 +1517,28 @@ async function reiniciarCamaraSolo(){
     const w = cam.videoWidth, h = cam.videoHeight;
     if (w && h) camPiP.style.aspectRatio = w + '/' + h;
     ajustarCanvas();
-  } catch(e){
-    console.warn('No se pudo reiniciar la cámara:', e);
-  }
+  } catch(e){}
 }
 
 $('btnRend2').addEventListener('click', ()=>{
+  reproducirSonido('click');
   $('inicio').classList.add('oculto');
   $('rendimiento').classList.remove('oculto');
   sincronizarUI();
 });
 
 $('btnRend').addEventListener('click', ()=>{
+  reproducirSonido('click');
   $('rendimiento').classList.remove('oculto');
   sincronizarUI();
 });
 
 document.querySelectorAll('#presetsGrid button').forEach(b => {
   b.addEventListener('click', () => {
+    reproducirSonido('click');
     const p = b.dataset.preset;
     aplicarPreset(p);
-    if (p === 'auto'){
-      iniciarAutoDeteccion();
-    }
+    if (p === 'auto') iniciarAutoDeteccion();
     document.querySelectorAll('#presetsGrid button').forEach(x => {
       x.classList.toggle('activo', x.dataset.preset === p);
     });
@@ -1350,27 +1546,30 @@ document.querySelectorAll('#presetsGrid button').forEach(b => {
 });
 
 $('btnAplicarRend').addEventListener('click', ()=>{
+  reproducirSonido('success');
   leerUIRendimiento();
   const info = $('rendInfo');
-  if (info) info.textContent = 'Cambios aplicados.';
+  if (info) info.textContent = 'Cambios aplicados correctamente.';
 });
 
 $('btnCerrarRend').addEventListener('click', ()=>{
+  reproducirSonido('click');
   $('rendimiento').classList.add('oculto');
-  /* Si nunca arrancó, volver a inicio */
   if (!estado.corriendo && $('inicio').classList.contains('oculto') && $('config').classList.contains('oculto')) {
     $('inicio').classList.remove('oculto');
   }
 });
 
-/* ═══════════════ CONFIG (videos + cámara) ═══════════════ */
+/* ═══════════════ CONFIGURACIÓN DE VIDEOS / CÁMARA IP ═══════════════ */
 $('btnConfig').addEventListener('click', ()=>{
+  reproducirSonido('click');
   construirPanelConfig();
   $('inicio').classList.add('oculto');
   $('config').classList.remove('oculto');
 });
 
 $('btnGuardar').addEventListener('click', ()=>{
+  reproducirSonido('success');
   const urls = [];
   for(let i=0;i<5;i++) urls.push(($('url'+i).value||'').trim());
   VIDEOS = urls;
@@ -1385,20 +1584,32 @@ $('btnGuardar').addEventListener('click', ()=>{
 });
 
 $('btnCancelar').addEventListener('click', ()=>{
+  reproducirSonido('click');
   $('config').classList.add('oculto');
   $('inicio').classList.remove('oculto');
 });
 
 $('btnAyuda').addEventListener('click', ()=>{
+  reproducirSonido('click');
   $('ayuda').classList.toggle('visible');
 });
 
+$('btnSound').addEventListener('click', ()=>{
+  sonidoActivo = !sonidoActivo;
+  $('btnSound').textContent = sonidoActivo ? '🔊' : '🔇';
+  if (sonidoActivo) reproducirSonido('click');
+});
+
 $('btnMute').addEventListener('click', ()=>{
+  reproducirSonido('click');
   video.muted = !video.muted;
   actualizarBotonMute();
 });
 
-$('btnFull').addEventListener('click', toggleFullscreen);
+$('btnFull').addEventListener('click', () => {
+  reproducirSonido('click');
+  toggleFullscreen();
+});
 
 function actualizarBotonMute(){
   $('btnMute').textContent = video.muted ? '🔇' : '🔊';
@@ -1407,21 +1618,27 @@ function actualizarBotonMute(){
 $('welcome').addEventListener('click', (e) => {
   const item = e.target.closest('[data-video]');
   const action = e.target.closest('[data-action]');
+  const gesto = e.target.closest('[data-gesto="corazon"]');
   if (item){
+    reproducirSonido('click');
     ocultarBienvenida();
     cargarVideo(parseInt(item.dataset.video));
   } else if (action){
+    reproducirSonido('click');
     ocultarBienvenida();
     const cmd = action.dataset.action;
     if (cmd === 'playpause') togglePlay();
     else if (cmd === 'siguiente') cargarVideo((estado.indiceVideo+1)%VIDEOS.length);
     else if (cmd === 'fullscreen') toggleFullscreen();
+  } else if (gesto){
+    reproducirSonido('click');
+    ocultarBienvenida();
+    mostrarCorazon();
   }
 });
 
 function construirPanelConfig(){
   const p = $('configPanel'); p.innerHTML = '';
-
   const lblCam = document.createElement('label');
   lblCam.innerHTML = '📷 URL cámara externa (opcional)';
   const inpCam = document.createElement('input');
@@ -1433,7 +1650,7 @@ function construirPanelConfig(){
 
   const hintCam = document.createElement('div');
   hintCam.className = 'hint';
-  hintCam.textContent = 'Deja vacío para usar la cámara del dispositivo.';
+  hintCam.textContent = 'Deja vacío para usar la cámara web del dispositivo.';
   p.appendChild(hintCam);
 
   for(let i=0;i<5;i++){
@@ -1448,11 +1665,12 @@ function construirPanelConfig(){
   }
 }
 
-/* ═══════════════ ARRANQUE ═══════════════ */
-aplicarEfectos();
+/* ═══════════════ INICIALIZACIÓN GLOBAL ═══════════════ */
+aplicarTema();
 ajustarCanvas();
 sincronizarUI();
 actualizarBotonFull();
+actualizarBotonMute();
 setEstado('Listo para iniciar');
 </script>
 </body>
