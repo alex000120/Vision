@@ -1,0 +1,2833 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#050816" />
+  <title>IA Holográfica · Neo Gestural Edition</title>
+
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+  <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
+
+  <style>
+    :root {
+      --bg-0: #050816;
+      --bg-1: #0a0e27;
+      --glass: rgba(255, 255, 255, 0.055);
+      --glass-2: rgba(255, 255, 255, 0.08);
+      --border: rgba(255, 255, 255, 0.12);
+      --text: #eef4ff;
+      --muted: #93a4c3;
+      --primary: #00ff9d;
+      --primary-2: #00d3ff;
+      --warn: #ffc14d;
+      --danger: #ff5d73;
+      --shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+      --radius-lg: 22px;
+      --radius-md: 16px;
+      --radius-sm: 10px;
+      --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background:
+        radial-gradient(1200px 800px at 15% 10%, rgba(0,211,255,.12), transparent 55%),
+        radial-gradient(1000px 700px at 85% 20%, rgba(0,255,157,.10), transparent 50%),
+        linear-gradient(160deg, var(--bg-0), var(--bg-1) 55%, #081026);
+      color: var(--text);
+      font-family: var(--font);
+      overflow: hidden;
+    }
+
+    body {
+      height: 100vh;
+      height: 100dvh;
+      transition: background .45s ease;
+    }
+
+    body.reduce-effects {
+      background: linear-gradient(160deg, var(--bg-0), var(--bg-1));
+    }
+
+    body.reduce-effects .bg-grid,
+    body.reduce-effects .orb,
+    body.reduce-effects .scanline,
+    body.reduce-effects .viewport::after,
+    body.reduce-effects .kiosk-hint {
+      display: none !important;
+    }
+
+    body.reduce-effects * {
+      animation: none !important;
+      transition: none !important;
+      backdrop-filter: none !important;
+    }
+
+    .app {
+      position: relative;
+      z-index: 2;
+      height: 100dvh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: 14px;
+      padding: 14px;
+    }
+
+    .bg-grid {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      opacity: .18;
+      background-image:
+        linear-gradient(rgba(255,255,255,.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.06) 1px, transparent 1px);
+      background-size: 42px 42px;
+      -webkit-mask-image: radial-gradient(circle at 50% 40%, black 20%, transparent 75%);
+      mask-image: radial-gradient(circle at 50% 40%, black 20%, transparent 75%);
+    }
+
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(70px);
+      opacity: .22;
+      z-index: 0;
+      pointer-events: none;
+      animation: float 14s ease-in-out infinite alternate;
+      transition: background .45s ease;
+    }
+
+    .orb.one { width: 360px; height: 360px; left: -80px; top: 10%; background: var(--primary-2); }
+    .orb.two { width: 300px; height: 300px; right: -50px; top: 18%; background: var(--primary); animation-delay: -5s; }
+    .orb.three { width: 260px; height: 260px; left: 38%; bottom: -90px; background: #7b5cff; animation-delay: -9s; }
+
+    @keyframes float {
+      from { transform: translate3d(0, 0, 0) scale(1); }
+      to { transform: translate3d(30px, -20px, 0) scale(1.08); }
+    }
+
+    .topbar {
+      position: relative;
+      z-index: 3;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+    }
+
+    .brand {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: clamp(1rem, 2.2vw, 1.45rem);
+      font-weight: 800;
+      letter-spacing: .3px;
+      background: linear-gradient(90deg, var(--primary), var(--primary-2));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .brand p {
+      margin: 0;
+      color: var(--muted);
+      font-size: .86rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,.22);
+      color: var(--muted);
+      font-size: .85rem;
+      white-space: nowrap;
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--danger);
+      box-shadow: 0 0 0 0 rgba(255, 93, 115, .45);
+      animation: pulseDot 1.8s infinite;
+    }
+
+    .dot.online {
+      background: var(--primary);
+      box-shadow: 0 0 0 0 rgba(0, 255, 157, .45);
+    }
+
+    @keyframes pulseDot {
+      0% { box-shadow: 0 0 0 0 currentColor; opacity: 1; }
+      70% { box-shadow: 0 0 0 10px transparent; opacity: .85; }
+      100% { box-shadow: 0 0 0 0 transparent; opacity: 1; }
+    }
+
+    .layout {
+      position: relative;
+      z-index: 2;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1.45fr) minmax(280px, .55fr);
+      gap: 14px;
+    }
+
+    .panel {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.028));
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+      overflow: hidden;
+      contain: layout paint style;
+    }
+
+    .stage {
+      display: grid;
+      grid-template-rows: 1fr auto;
+      gap: 12px;
+      min-height: 0;
+    }
+
+    .viewport {
+      position: relative;
+      min-height: 0;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: #000;
+      box-shadow: var(--shadow);
+    }
+
+    .viewport::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(transparent 0%, rgba(0,255,157,.03) 50%, transparent 100%),
+        radial-gradient(circle at 50% 50%, transparent 58%, rgba(0,0,0,.35) 100%);
+      mix-blend-mode: screen;
+      opacity: .55;
+      z-index: 1;
+    }
+
+    .viewport.switching::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 7;
+      pointer-events: none;
+      background: radial-gradient(circle at center, rgba(255,255,255,.18), transparent 62%);
+      animation: flash .45s ease forwards;
+    }
+
+    @keyframes flash {
+      from { opacity: 0; }
+      30% { opacity: 1; }
+      to { opacity: 0; }
+    }
+
+    .scanline {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 90px;
+      top: -90px;
+      background: linear-gradient(180deg, transparent, rgba(0,255,157,.08), transparent);
+      animation: scan 5.5s linear infinite;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    @keyframes scan {
+      0% { transform: translateY(0); }
+      100% { transform: translateY(120vh); }
+    }
+
+    #media {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+      background: #000;
+      position: relative;
+      z-index: 0;
+    }
+
+    .cam-pip {
+      position: absolute;
+      right: 14px;
+      bottom: 14px;
+      width: clamp(150px, 20vw, 240px);
+      aspect-ratio: 4 / 3;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid rgba(0,255,157,.28);
+      background: #020617;
+      box-shadow: 0 12px 30px rgba(0,0,0,.38);
+      z-index: 4;
+    }
+
+    #camera,
+    #overlay {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    #camera {
+      object-fit: cover;
+      transform: scaleX(-1);
+      background: #000;
+    }
+
+    #overlay {
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .cam-badge {
+      position: absolute;
+      left: 8px;
+      top: 8px;
+      z-index: 3;
+      padding: 5px 8px;
+      border-radius: 999px;
+      font-size: .72rem;
+      color: #dff9ff;
+      background: rgba(2, 6, 23, .58);
+      border: 1px solid rgba(255,255,255,.12);
+      backdrop-filter: blur(8px);
+    }
+
+    .boot-overlay,
+    .start-overlay,
+    .thanks-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 8;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 24px;
+      background:
+        radial-gradient(circle at 50% 40%, rgba(0,255,157,.10), transparent 42%),
+        rgba(2, 6, 23, .74);
+      backdrop-filter: blur(10px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .28s ease;
+    }
+
+    .boot-overlay { z-index: 9; }
+
+    .boot-overlay.show,
+    .start-overlay.show,
+    .thanks-overlay.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .boot-card {
+      display: grid;
+      gap: 10px;
+      justify-items: center;
+      color: var(--muted);
+      font-size: .95rem;
+    }
+
+    .boot-line {
+      width: 180px;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--primary), transparent);
+      animation: bootScan 1s linear infinite;
+    }
+
+    @keyframes bootScan {
+      0% { transform: translateX(-60px); }
+      100% { transform: translateX(60px); }
+    }
+
+    .hero-card {
+      max-width: 680px;
+      display: grid;
+      gap: 14px;
+      justify-items: center;
+    }
+
+    .hero-title {
+      font-size: clamp(1.4rem, 3.2vw, 2.4rem);
+      font-weight: 850;
+      margin: 0;
+      background: linear-gradient(90deg, #fff, var(--primary), var(--primary-2));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .hero-sub {
+      margin: 0;
+      color: var(--muted);
+      font-size: clamp(.95rem, 1.6vw, 1.08rem);
+      line-height: 1.45;
+    }
+
+    .cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 22px;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      color: #04140d;
+      font-weight: 800;
+      font-size: 1rem;
+      background: linear-gradient(90deg, var(--primary), var(--primary-2));
+      box-shadow: 0 12px 30px rgba(0, 255, 157, .22);
+      transition: transform .18s ease, filter .18s ease;
+    }
+
+    .cta:hover { transform: translateY(-1px); filter: brightness(1.06); }
+    .cta:active { transform: translateY(1px) scale(.99); }
+
+    .gesture-hud {
+      position: absolute;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%);
+      z-index: 6;
+      min-width: min(420px, 82vw);
+      padding: 12px 14px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(2, 6, 23, .62);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 12px 30px rgba(0,0,0,.3);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s ease, transform .2s ease;
+    }
+
+    .gesture-hud.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .gesture-hud-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+      font-size: .95rem;
+    }
+
+    .gesture-name {
+      font-weight: 800;
+      color: var(--primary);
+    }
+
+    .gesture-meta {
+      color: var(--muted);
+      font-size: .82rem;
+    }
+
+    .hold-track {
+      width: 100%;
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.12);
+      overflow: hidden;
+    }
+
+    .hold-fill {
+      width: 0%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--primary), var(--primary-2));
+      box-shadow: 0 0 16px rgba(0,255,157,.35);
+      transition: width .08s linear;
+    }
+
+    .transport {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .icon-btn,
+    .text-btn {
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,.05);
+      color: var(--text);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: .18s ease;
+      font: inherit;
+    }
+
+    .icon-btn {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      font-size: 1.05rem;
+    }
+
+    .icon-btn.off { opacity: .45; }
+
+    .text-btn {
+      padding: 10px 14px;
+      font-weight: 700;
+      font-size: .92rem;
+    }
+
+    .icon-btn:hover,
+    .text-btn:hover {
+      border-color: rgba(0,255,157,.35);
+      background: rgba(0,255,157,.10);
+      transform: translateY(-1px);
+    }
+
+    .icon-btn:active,
+    .text-btn:active {
+      transform: translateY(1px) scale(.99);
+    }
+
+    .seek-wrap {
+      display: grid;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .seek-meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--muted);
+      font-size: .82rem;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--primary);
+    }
+
+    .sidebar {
+      min-height: 0;
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      gap: 14px;
+      overflow: hidden;
+    }
+
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,.03);
+    }
+
+    .panel-head h2,
+    .panel-head h3 {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .mini {
+      color: var(--muted);
+      font-size: .82rem;
+    }
+
+    .chat {
+      min-height: 180px;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    .chat-log {
+      padding: 12px 14px;
+      overflow: auto;
+      display: grid;
+      gap: 8px;
+      min-height: 0;
+    }
+
+    .msg {
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.08);
+      background: rgba(255,255,255,.04);
+      font-size: .9rem;
+      line-height: 1.35;
+      color: #dbe7ff;
+    }
+
+    .msg.system { border-left: 3px solid var(--primary-2); }
+    .msg.success { border-left: 3px solid var(--primary); }
+    .msg.warn { border-left: 3px solid var(--warn); }
+    .msg.error { border-left: 3px solid var(--danger); }
+
+    .gestures {
+      display: grid;
+      gap: 8px;
+      padding: 12px 14px;
+      overflow: auto;
+      min-height: 0;
+    }
+
+    .gesture-option {
+      display: grid;
+      grid-template-columns: 42px 1fr auto;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      text-align: left;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.08);
+      background: rgba(255,255,255,.035);
+      color: var(--text);
+      cursor: pointer;
+      transition: .18s ease;
+      font: inherit;
+    }
+
+    .gesture-option:hover {
+      border-color: rgba(0,255,157,.28);
+      background: rgba(0,255,157,.08);
+      transform: translateX(2px);
+    }
+
+    .gesture-option.active {
+      border-color: var(--primary);
+      background: rgba(0,255,157,.14);
+      box-shadow: 0 0 0 1px rgba(0,255,157,.18) inset;
+    }
+
+    .gesture-option.flash {
+      animation: flashBtn .45s ease;
+    }
+
+    @keyframes flashBtn {
+      0% { transform: scale(1); }
+      40% { transform: scale(1.03); background: rgba(0,255,157,.22); }
+      100% { transform: scale(1); }
+    }
+
+    .gesture-option .emoji {
+      font-size: 1.35rem;
+      text-align: center;
+    }
+
+    .gesture-option .title {
+      font-weight: 750;
+      font-size: .94rem;
+    }
+
+    .gesture-option .desc {
+      color: var(--muted);
+      font-size: .8rem;
+      margin-top: 2px;
+    }
+
+    .gesture-option .kbd {
+      font-size: .72rem;
+      color: var(--muted);
+      padding: 4px 7px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,.1);
+      background: rgba(0,0,0,.18);
+      white-space: nowrap;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(105px, 1fr));
+      gap: 10px;
+      padding: 12px 14px;
+    }
+
+    .stat {
+      padding: 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.08);
+      background: rgba(255,255,255,.035);
+    }
+
+    .stat .label {
+      color: var(--muted);
+      font-size: .78rem;
+      margin-bottom: 5px;
+    }
+
+    .stat .value {
+      font-size: 1.08rem;
+      font-weight: 850;
+      color: var(--primary);
+      word-break: break-word;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: none;
+      place-items: center;
+      padding: 18px;
+      background: rgba(2, 6, 23, .72);
+      backdrop-filter: blur(10px);
+    }
+
+    .modal-backdrop.open { display: grid; }
+
+    .modal {
+      width: min(780px, 100%);
+      max-height: min(86dvh, 860px);
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      background: linear-gradient(180deg, #0d1430, #091024);
+      box-shadow: 0 30px 80px rgba(0,0,0,.45);
+    }
+
+    .modal-header {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, #10193a, #0d1430);
+    }
+
+    .modal-header h2 {
+      margin: 0;
+      font-size: 1.08rem;
+    }
+
+    .close-x {
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,.05);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 1.2rem;
+      line-height: 1;
+    }
+
+    .close-x:hover {
+      background: rgba(255,93,115,.14);
+      border-color: rgba(255,93,115,.35);
+    }
+
+    .modal-body {
+      padding: 16px 18px 18px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .field-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .field {
+      display: grid;
+      gap: 7px;
+      min-width: 0;
+    }
+
+    .field.full { grid-column: 1 / -1; }
+
+    label {
+      font-size: .88rem;
+      color: #d7e2ff;
+      font-weight: 650;
+    }
+
+    select,
+    textarea,
+    input[type="text"] {
+      width: 100%;
+      padding: 11px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,.045);
+      color: var(--text);
+      font: inherit;
+      outline: none;
+    }
+
+    select:focus,
+    textarea:focus,
+    input[type="text"]:focus {
+      border-color: rgba(0,255,157,.45);
+      box-shadow: 0 0 0 3px rgba(0,255,157,.10);
+    }
+
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+      line-height: 1.45;
+    }
+
+    .check-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,.035);
+      min-height: 46px;
+    }
+
+    .check-row input {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--primary);
+      flex: 0 0 auto;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .toast-wrap {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 80;
+      display: grid;
+      gap: 10px;
+      width: min(360px, calc(100vw - 32px));
+    }
+
+    .toast {
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: rgba(9, 16, 36, .92);
+      box-shadow: 0 16px 40px rgba(0,0,0,.28);
+      color: var(--text);
+      font-size: .92rem;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      animation: toastIn .24s ease;
+    }
+
+    .toast.success { border-left: 4px solid var(--primary); }
+    .toast.error { border-left: 4px solid var(--danger); }
+    .toast.warn { border-left: 4px solid var(--warn); }
+    .toast.info { border-left: 4px solid var(--primary-2); }
+
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateX(16px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    .kiosk-hint {
+      position: fixed;
+      left: 50%;
+      bottom: 16px;
+      transform: translateX(-50%);
+      z-index: 90;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(2,6,23,.72);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: .82rem;
+      backdrop-filter: blur(10px);
+      display: none;
+      pointer-events: none;
+    }
+
+    body.kiosk .kiosk-hint { display: block; }
+
+    body.kiosk .sidebar,
+    body.kiosk #cfgBtn,
+    body.kiosk #perfBtn,
+    body.kiosk .brand p {
+      display: none !important;
+    }
+
+    body.kiosk .layout {
+      grid-template-columns: 1fr;
+    }
+
+    body.kiosk .topbar {
+      padding: 8px 12px;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @media (max-width: 1180px) {
+      .layout {
+        grid-template-columns: 1fr;
+        grid-template-rows: minmax(320px, 1.15fr) minmax(280px, .85fr);
+      }
+
+      .sidebar {
+        grid-template-rows: auto auto auto;
+        overflow: auto;
+      }
+    }
+
+    @media (max-width: 860px) {
+      .topbar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .top-actions {
+        justify-content: space-between;
+      }
+
+      .transport {
+        grid-template-columns: 1fr;
+      }
+
+      .btn-row {
+        justify-content: center;
+      }
+
+      .field-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .cam-pip {
+        width: 132px;
+        right: 10px;
+        bottom: 10px;
+      }
+    }
+
+    @media (max-height: 760px) {
+      .brand p { display: none; }
+      .chat { min-height: 140px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-grid" aria-hidden="true"></div>
+  <div class="orb one" aria-hidden="true"></div>
+  <div class="orb two" aria-hidden="true"></div>
+  <div class="orb three" aria-hidden="true"></div>
+
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <h1>IA Holográfica · Neo Gestural Edition</h1>
+        <p>Ambas manos, mismo gesto, control absoluto.</p>
+      </div>
+
+      <div class="top-actions">
+        <button class="icon-btn" id="soundBtn" title="Sonido (L)">🔊</button>
+        <button class="icon-btn" id="standBtn" title="Modo stand (K)">🖥️</button>
+        <div class="status-pill" aria-live="polite">
+          <span class="dot" id="statusDot"></span>
+          <span id="statusText">Sistema offline</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="stage">
+        <div class="viewport" id="viewport">
+          <div class="scanline" aria-hidden="true"></div>
+
+          <video id="media" playsinline muted preload="metadata"></video>
+
+          <div class="cam-pip" id="camPip">
+            <video id="camera" autoplay muted playsinline></video>
+            <canvas id="overlay"></canvas>
+            <div class="cam-badge" id="handInfo">Cámara</div>
+          </div>
+
+          <div class="gesture-hud" id="gestureHud">
+            <div class="gesture-hud-top">
+              <div>
+                <div class="gesture-name" id="gestureName">—</div>
+                <div class="gesture-meta" id="gestureHint">Esperando ambas manos…</div>
+              </div>
+              <div class="gesture-meta" id="gestureTimer">0%</div>
+            </div>
+            <div class="hold-track" aria-hidden="true">
+              <div class="hold-fill" id="holdFill"></div>
+            </div>
+          </div>
+
+          <div class="boot-overlay" id="bootOverlay">
+            <div class="boot-card">
+              <div>Inicializando núcleo gestual…</div>
+              <div class="boot-line"></div>
+            </div>
+          </div>
+
+          <div class="start-overlay show" id="startOverlay">
+            <div class="hero-card">
+              <h2 class="hero-title">¿Con qué empezamos, Alex?</h2>
+              <p class="hero-sub" id="attractText">
+                Inicia la cámara y muestra una seña con <strong>ambas manos</strong>.
+                Mantén el gesto un instante para activarlo.
+              </p>
+              <button class="cta" id="startBtn">▶ Iniciar cámara</button>
+              <p class="mini">Puedes usar los botones laterales como alternativa manual.</p>
+            </div>
+          </div>
+
+          <div class="thanks-overlay" id="thanksOverlay">
+            <div class="hero-card">
+              <h2 class="hero-title">Gracias por visitar nuestro stand ✨✨✨✨✨✨</h2>
+              <p class="hero-sub">Sistema en reposo. Toca para cerrar.</p>
+              <button class="cta" id="closeThanksBtn">Cerrar</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="transport">
+          <div class="btn-row">
+            <button class="icon-btn" id="prevBtn" title="Anterior (P)">⏮</button>
+            <button class="icon-btn" id="playBtn" title="Play/Pausa (Espacio)">⏯</button>
+            <button class="icon-btn" id="nextBtn" title="Siguiente (N)">⏭</button>
+            <button class="icon-btn" id="muteBtn" title="Silenciar video (M)">🔇</button>
+            <button class="icon-btn" id="fsBtn" title="Pantalla completa (F)">🔳</button>
+            <button class="icon-btn" id="powerBtn" title="Encender/Apagar cámara (S)">⚡</button>
+          </div>
+
+          <div class="seek-wrap">
+            <input type="range" id="seek" min="0" max="1000" value="0" step="1" aria-label="Progreso del video" />
+            <div class="seek-meta">
+              <span id="videoLabel">Video — / —</span>
+              <span id="timeLabel">00:00 / 00:00</span>
+            </div>
+          </div>
+
+          <div class="btn-row">
+            <button class="text-btn" id="perfBtn">⚡ Rendimiento</button>
+            <button class="text-btn" id="cfgBtn">⚙ Configurar</button>
+          </div>
+        </div>
+      </section>
+
+      <aside class="sidebar">
+        <section class="panel chat">
+          <div class="panel-head">
+            <h3>Consola IA</h3>
+            <span class="mini">feedback en vivo</span>
+          </div>
+          <div class="chat-log" id="chatLog" aria-live="polite"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h3>Métricas</h3>
+            <span class="mini">tiempo real</span>
+          </div>
+          <div class="stats-grid">
+            <div class="stat">
+              <div class="label">FPS</div>
+              <div class="value" id="fpsValue">0</div>
+            </div>
+            <div class="stat">
+              <div class="label">Latencia</div>
+              <div class="value" id="latencyValue">0 ms</div>
+            </div>
+            <div class="stat">
+              <div class="label">Manos</div>
+              <div class="value" id="handsValue">0</div>
+            </div>
+            <div class="stat">
+              <div class="label">Gesto</div>
+              <div class="value" id="currentGestureValue">—</div>
+            </div>
+            <div class="stat">
+              <div class="label">Modo</div>
+              <div class="value" id="tierValue">balanced</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel" style="min-height:0; display:grid; grid-template-rows:auto 1fr;">
+          <div class="panel-head">
+            <h3>Gestos (2 manos)</h3>
+            <span class="mini">clic = fallback</span>
+          </div>
+          <div class="gestures" id="gestureList"></div>
+        </section>
+      </aside>
+    </main>
+  </div>
+
+  <div class="kiosk-hint">ESC para salir del modo stand</div>
+
+  <!-- Modal rendimiento -->
+  <div class="modal-backdrop" id="perfModal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="perfTitle">
+      <div class="modal-header">
+        <h2 id="perfTitle">⚡ Rendimiento</h2>
+        <button class="close-x" data-close="perfModal" aria-label="Cerrar">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="field-grid">
+          <div class="field">
+            <label for="presetSelect">Preset</label>
+            <select id="presetSelect">
+              <option value="auto">Auto</option>
+              <option value="minimum">Mínimo</option>
+              <option value="low">Bajo</option>
+              <option value="balanced">Medio</option>
+              <option value="high">Alto</option>
+              <option value="ultra">Ultra</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="detResSelect">Resolución de detección</label>
+            <select id="detResSelect">
+              <option value="128x96">128×96 · extremo</option>
+              <option value="160x120">160×120</option>
+              <option value="192x144">192×144</option>
+              <option value="256x192">256×192</option>
+              <option value="320x240">320×240 · recomendado</option>
+              <option value="480x360">480×360 · fino</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="fpsSelect">FPS máximo de detección</label>
+            <select id="fpsSelect">
+              <option value="6">6</option>
+              <option value="8">8</option>
+              <option value="12">12</option>
+              <option value="15">15</option>
+              <option value="20">20</option>
+              <option value="24">24</option>
+              <option value="30">30</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="overlaySelect">Overlay</label>
+            <select id="overlaySelect">
+              <option value="off">Apagado</option>
+              <option value="simple">Simple</option>
+              <option value="full">Completo</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="modelSelect">Modelo</label>
+            <select id="modelSelect">
+              <option value="0">Lite</option>
+              <option value="1">Full</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="camResSelect">Resolución de cámara</label>
+            <select id="camResSelect">
+              <option value="320x240">320×240</option>
+              <option value="480x360">480×360</option>
+              <option value="640x480">640×480</option>
+              <option value="960x540">960×540</option>
+              <option value="1280x720">1280×720</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="holdSelect">Tiempo de activación</label>
+            <select id="holdSelect">
+              <option value="400">400 ms · rápido</option>
+              <option value="500">500 ms</option>
+              <option value="600">600 ms</option>
+              <option value="700">700 ms · balanceado</option>
+              <option value="800">800 ms</option>
+              <option value="900">900 ms</option>
+              <option value="1000">1000 ms</option>
+              <option value="1200">1200 ms · muy estable</option>
+            </select>
+          </div>
+
+          <div class="field full">
+            <div class="check-row">
+              <input type="checkbox" id="reduceFxCheck" />
+              <label for="reduceFxCheck">Reducir efectos visuales para ganar fluidez</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button class="text-btn" data-close="perfModal">Cancelar</button>
+          <button class="cta" id="applyPerfBtn">Aplicar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal configuración -->
+  <div class="modal-backdrop" id="cfgModal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="cfgTitle">
+      <div class="modal-header">
+        <h2 id="cfgTitle">⚙ Configuración</h2>
+        <button class="close-x" data-close="cfgModal" aria-label="Cerrar">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="field-grid">
+          <div class="field full">
+            <label for="cameraSelect">Cámara</label>
+            <select id="cameraSelect">
+              <option value="">Predeterminada</option>
+            </select>
+          </div>
+
+          <div class="field full">
+            <label for="videosTextarea">Videos (una URL por línea)</label>
+            <textarea id="videosTextarea" spellcheck="false"></textarea>
+          </div>
+
+          <div class="field">
+            <label for="idleSelect">Reinicio por inactividad</label>
+            <select id="idleSelect">
+              <option value="0">Desactivado</option>
+              <option value="30">30 s</option>
+              <option value="60">60 s</option>
+              <option value="90">90 s</option>
+              <option value="120">2 min</option>
+              <option value="300">5 min</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <div class="check-row">
+              <input type="checkbox" id="soundCheck" />
+              <label for="soundCheck">Sonidos de interfaz</label>
+            </div>
+          </div>
+
+          <div class="field full">
+            <div class="check-row">
+              <input type="checkbox" id="debugCheck" />
+              <label for="debugCheck">Mostrar depuración de manos (lado y gesto detectado)</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button class="text-btn" data-close="cfgModal">Cancelar</button>
+          <button class="cta" id="saveCfgBtn">Guardar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-wrap" id="toastWrap" aria-live="polite" aria-atomic="false"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+  <script>
+    (() => {
+      'use strict';
+
+      const STORAGE_KEY = 'holoGestos.neon.v4';
+
+      const DEFAULT_VIDEOS = [
+        'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+        'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
+        'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+        'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
+        'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4'
+      ];
+
+      const VIDEO_ACCENTS = [
+        ['#00ff9d', '#00d3ff'],
+        ['#00d3ff', '#7b5cff'],
+        ['#7b5cff', '#ff5d73'],
+        ['#ffc14d', '#ff5d73'],
+        ['#ff5d73', '#00ff9d']
+      ];
+
+      const TIERS = [
+        { name: 'minimum', det: [128, 96], fps: 8, model: 0, overlay: 'simple' },
+        { name: 'low', det: [160, 120], fps: 10, model: 0, overlay: 'simple' },
+        { name: 'balanced', det: [256, 192], fps: 15, model: 1, overlay: 'full' },
+        { name: 'high', det: [320, 240], fps: 20, model: 1, overlay: 'full' },
+        { name: 'ultra', det: [480, 360], fps: 24, model: 1, overlay: 'full' }
+      ];
+
+      const GESTURE_DEFS = [
+        { id: 'one', emoji: '☝️☝️', title: 'Índice', desc: 'Video 1', key: '1' },
+        { id: 'two', emoji: '✌️✌️', title: 'Índice + Medio', desc: 'Video 2', key: '2' },
+        { id: 'three', emoji: '🖖', title: '3 dedos', desc: 'Video 3', key: '3' },
+        { id: 'shaka', emoji: '🤙🤙', title: 'Pulgar + Meñique', desc: 'Video 4', key: '4' },
+        { id: 'five', emoji: '🖐️🖐️', title: '5 dedos', desc: 'Video 5', key: '5' },
+        { id: 'fist', emoji: '✊✊', title: 'Puño', desc: 'Play / Pausa', key: 'Espacio' },
+        { id: 'thumbsup', emoji: '👍👍', title: 'Pulgar arriba', desc: 'Siguiente', key: 'N' },
+        { id: 'iloveyou', emoji: '🤟🤟', title: '"Te amo"', desc: 'Pantalla completa', key: 'F' },
+        { id: 'heart', emoji: '💚💚', title: 'Corazón / OK', desc: 'Cierre', key: 'X' }
+      ];
+
+      const GESTURE_LABEL = Object.fromEntries(
+        GESTURE_DEFS.map(g => [g.id, `${g.emoji} ${g.title}`])
+      );
+
+      const ATTRACT_MESSAGES = [
+        'Inicia la cámara y muestra una seña con ambas manos. Mantén el gesto un instante para activarlo.',
+        '☝️☝️ Video 1 · ✌️✌️ Video 2 · 🖖 Video 3 · 🤙 Video 4 · 🖐️🖐️ Video 5',
+        '✊✊ Play/Pausa · 👍👍 Siguiente · 🤟🤟 Pantalla completa · 💚💚 Cierre',
+        'Puedes usar los botones laterales si prefieres control manual.',
+        'El sistema se adapta solo al rendimiento de tu dispositivo.'
+      ];
+
+      const HAND_CONNECTIONS = [
+        [0,1],[1,2],[2,3],[3,4],
+        [0,5],[5,6],[6,7],[7,8],
+        [5,9],[9,10],[10,11],[11,12],
+        [9,13],[13,14],[14,15],[15,16],
+        [13,17],[17,18],[18,19],[19,20],
+        [0,17]
+      ];
+
+      const TIP_INDICES = [4, 8, 12, 16, 20];
+
+      const el = {
+        statusDot: document.getElementById('statusDot'),
+        statusText: document.getElementById('statusText'),
+        soundBtn: document.getElementById('soundBtn'),
+        standBtn: document.getElementById('standBtn'),
+
+        viewport: document.getElementById('viewport'),
+        bootOverlay: document.getElementById('bootOverlay'),
+        media: document.getElementById('media'),
+        camera: document.getElementById('camera'),
+        overlay: document.getElementById('overlay'),
+        camPip: document.getElementById('camPip'),
+        handInfo: document.getElementById('handInfo'),
+
+        gestureHud: document.getElementById('gestureHud'),
+        gestureName: document.getElementById('gestureName'),
+        gestureHint: document.getElementById('gestureHint'),
+        gestureTimer: document.getElementById('gestureTimer'),
+        holdFill: document.getElementById('holdFill'),
+
+        startOverlay: document.getElementById('startOverlay'),
+        startBtn: document.getElementById('startBtn'),
+        attractText: document.getElementById('attractText'),
+        thanksOverlay: document.getElementById('thanksOverlay'),
+        closeThanksBtn: document.getElementById('closeThanksBtn'),
+
+        prevBtn: document.getElementById('prevBtn'),
+        playBtn: document.getElementById('playBtn'),
+        nextBtn: document.getElementById('nextBtn'),
+        muteBtn: document.getElementById('muteBtn'),
+        fsBtn: document.getElementById('fsBtn'),
+        powerBtn: document.getElementById('powerBtn'),
+
+        seek: document.getElementById('seek'),
+        videoLabel: document.getElementById('videoLabel'),
+        timeLabel: document.getElementById('timeLabel'),
+
+        perfBtn: document.getElementById('perfBtn'),
+        cfgBtn: document.getElementById('cfgBtn'),
+
+        fpsValue: document.getElementById('fpsValue'),
+        latencyValue: document.getElementById('latencyValue'),
+        handsValue: document.getElementById('handsValue'),
+        currentGestureValue: document.getElementById('currentGestureValue'),
+        tierValue: document.getElementById('tierValue'),
+
+        chatLog: document.getElementById('chatLog'),
+        gestureList: document.getElementById('gestureList'),
+
+        perfModal: document.getElementById('perfModal'),
+        cfgModal: document.getElementById('cfgModal'),
+
+        presetSelect: document.getElementById('presetSelect'),
+        detResSelect: document.getElementById('detResSelect'),
+        fpsSelect: document.getElementById('fpsSelect'),
+        overlaySelect: document.getElementById('overlaySelect'),
+        modelSelect: document.getElementById('modelSelect'),
+        camResSelect: document.getElementById('camResSelect'),
+        holdSelect: document.getElementById('holdSelect'),
+        reduceFxCheck: document.getElementById('reduceFxCheck'),
+        applyPerfBtn: document.getElementById('applyPerfBtn'),
+
+        cameraSelect: document.getElementById('cameraSelect'),
+        videosTextarea: document.getElementById('videosTextarea'),
+        idleSelect: document.getElementById('idleSelect'),
+        soundCheck: document.getElementById('soundCheck'),
+        debugCheck: document.getElementById('debugCheck'),
+        saveCfgBtn: document.getElementById('saveCfgBtn'),
+
+        toastWrap: document.getElementById('toastWrap')
+      };
+
+      const ctx = el.overlay.getContext('2d', { alpha: true, desynchronized: true });
+
+      const workCanvas = document.createElement('canvas');
+      const workCtx = workCanvas.getContext('2d', { alpha: false, desynchronized: true });
+
+      const state = {
+        running: false,
+        processing: false,
+        raf: 0,
+        stream: null,
+        hands: null,
+        lastProcess: 0,
+        frames: 0,
+        fpsWindowStart: performance.now(),
+        fps: 0,
+        latency: 0,
+        lastStatsUpdate: 0,
+        lastAutoAdjust: 0,
+        tierIndex: 2,
+        candidate: null,
+        candidateStart: 0,
+        lastMatchTime: 0,
+        cooldownUntil: 0,
+        currentVideo: 0,
+        currentUrl: '',
+        seeking: false,
+        cssW: 1,
+        cssH: 1,
+        dpr: 1,
+        aspect: 4 / 3,
+        smoothMap: new Map(),
+        particles: [],
+        lastParticleTime: performance.now(),
+        lastActivity: performance.now(),
+        attractIndex: 0,
+        attractTimer: 0,
+        errors: 0,
+        audioCtx: null,
+        accent: '#00ff9d',
+        accent2: '#00d3ff',
+        gestureButtons: []
+      };
+
+      const config = {
+        autoPerf: true,
+        preset: 'auto',
+        detectionWidth: 256,
+        detectionHeight: 192,
+        targetFPS: 15,
+        modelComplexity: 1,
+        overlay: 'full',
+        cameraWidth: 640,
+        cameraHeight: 480,
+        holdMs: 700,
+        reduceEffects: false,
+        deviceId: '',
+        videos: [...DEFAULT_VIDEOS],
+        soundEnabled: true,
+        debugOverlay: false,
+        idleResetSec: 90
+      };
+
+      const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
+
+      const fmtTime = (sec) => {
+        if (!Number.isFinite(sec) || sec < 0) sec = 0;
+        const m = Math.floor(sec / 60).toString().padStart(2, '0');
+        const s = Math.floor(sec % 60).toString().padStart(2, '0');
+        return `${m}:${s}`;
+      };
+
+      const hexToRgba = (hex, alpha) => {
+        const clean = hex.replace('#', '').trim();
+        const full = clean.length === 3 ? clean.split('').map(c => c + c).join('') : clean;
+        const int = parseInt(full, 16);
+        const r = (int >> 16) & 255;
+        const g = (int >> 8) & 255;
+        const b = int & 255;
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      };
+
+      const toast = (message, type = 'info') => {
+        const node = document.createElement('div');
+        node.className = `toast ${type}`;
+        node.textContent = message;
+        el.toastWrap.appendChild(node);
+
+        setTimeout(() => {
+          node.style.opacity = '0';
+          node.style.transform = 'translateX(12px)';
+          node.style.transition = 'opacity .2s ease, transform .2s ease';
+          setTimeout(() => node.remove(), 220);
+        }, 2800);
+      };
+
+      const log = (message, type = 'system') => {
+        const item = document.createElement('div');
+        item.className = `msg ${type}`;
+        item.textContent = message;
+        el.chatLog.appendChild(item);
+
+        while (el.chatLog.children.length > 40) {
+          el.chatLog.removeChild(el.chatLog.firstElementChild);
+        }
+
+        el.chatLog.scrollTop = el.chatLog.scrollHeight;
+      };
+
+      const saveConfig = () => {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+        } catch (_) {}
+      };
+
+      const loadConfig = () => {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return;
+
+          const parsed = JSON.parse(raw);
+          Object.assign(config, parsed);
+
+          config.videos = Array.isArray(config.videos)
+            ? config.videos.map(String).map(s => s.trim()).filter(Boolean)
+            : [...DEFAULT_VIDEOS];
+
+          if (!config.videos.length) config.videos = [...DEFAULT_VIDEOS];
+
+          config.detectionWidth = clamp(Number(config.detectionWidth) || 256, 96, 640);
+          config.detectionHeight = clamp(Number(config.detectionHeight) || 192, 72, 480);
+          config.targetFPS = clamp(Number(config.targetFPS) || 15, 6, 30);
+          config.modelComplexity = config.modelComplexity === 1 ? 1 : 0;
+          config.holdMs = clamp(Number(config.holdMs) || 700, 300, 1500);
+          config.cameraWidth = clamp(Number(config.cameraWidth) || 640, 320, 1280);
+          config.cameraHeight = clamp(Number(config.cameraHeight) || 480, 240, 720);
+          config.overlay = ['off', 'simple', 'full'].includes(config.overlay) ? config.overlay : 'full';
+          config.preset = ['auto','minimum','low','balanced','high','ultra'].includes(config.preset) ? config.preset : 'auto';
+          config.autoPerf = !!config.autoPerf;
+          config.reduceEffects = !!config.reduceEffects;
+          config.soundEnabled = config.soundEnabled !== false;
+          config.debugOverlay = !!config.debugOverlay;
+          config.idleResetSec = [0,30,60,90,120,300].includes(Number(config.idleResetSec))
+            ? Number(config.idleResetSec)
+            : 90;
+        } catch (err) {
+          console.warn('No se pudo cargar configuración', err);
+        }
+      };
+
+      const unlockAudio = () => {
+        try {
+          if (!state.audioCtx) {
+            state.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          }
+          if (state.audioCtx.state === 'suspended') {
+            state.audioCtx.resume();
+          }
+        } catch (_) {}
+      };
+
+      const tone = (freq, dur = 0.08, type = 'sine', vol = 0.04, delay = 0) => {
+        if (!config.soundEnabled) return;
+        unlockAudio();
+        const ac = state.audioCtx;
+        if (!ac) return;
+
+        try {
+          const t = ac.currentTime + delay;
+          const osc = ac.createOscillator();
+          const gain = ac.createGain();
+
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, t);
+
+          gain.gain.setValueAtTime(0.0001, t);
+          gain.gain.exponentialRampToValueAtTime(vol, t + 0.01);
+          gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+
+          osc.connect(gain);
+          gain.connect(ac.destination);
+
+          osc.start(t);
+          osc.stop(t + dur + 0.03);
+        } catch (_) {}
+      };
+
+      const sfx = (name) => {
+        switch (name) {
+          case 'start':
+            tone(330, 0.12, 'sine', 0.04, 0);
+            tone(494, 0.12, 'sine', 0.035, 0.08);
+            break;
+          case 'success':
+            tone(660, 0.09, 'triangle', 0.045, 0);
+            tone(880, 0.12, 'sine', 0.035, 0.06);
+            break;
+          case 'error':
+            tone(180, 0.18, 'sawtooth', 0.03, 0);
+            break;
+          case 'ui':
+            tone(520, 0.04, 'square', 0.018, 0);
+            break;
+          case 'close':
+            tone(392, 0.12, 'sine', 0.035, 0);
+            tone(262, 0.18, 'sine', 0.03, 0.08);
+            break;
+        }
+      };
+
+      const dist = (a, b, aspect = 1) => {
+        const dx = (a.x - b.x) * aspect;
+        const dy = a.y - b.y;
+        return Math.hypot(dx, dy);
+      };
+
+      const angleAt = (a, b, c, aspect = 1) => {
+        const v1x = (a.x - b.x) * aspect;
+        const v1y = a.y - b.y;
+        const v2x = (c.x - b.x) * aspect;
+        const v2y = c.y - b.y;
+
+        const mag1 = Math.hypot(v1x, v1y) || 1e-6;
+        const mag2 = Math.hypot(v2x, v2y) || 1e-6;
+
+        const dot = (v1x * v2x + v1y * v2y) / (mag1 * mag2);
+        const rad = Math.acos(clamp(dot, -1, 1));
+        return rad * 180 / Math.PI;
+      };
+
+      const palmScale = (lm, aspect) => {
+        return Math.max(0.08, dist(lm[0], lm[9], aspect));
+      };
+
+      const isFingerExtended = (lm, tipIdx, aspect) => {
+        const tip = lm[tipIdx];
+        const pip = lm[tipIdx - 2];
+        const mcp = lm[tipIdx - 3];
+        const wrist = lm[0];
+
+        const ang = angleAt(mcp, pip, tip, aspect);
+        const dTip = dist(tip, wrist, aspect);
+        const dPip = dist(pip, wrist, aspect);
+
+        return ang > 148 && dTip > dPip * 1.015;
+      };
+
+      const isThumbExtended = (lm, aspect) => {
+        const ang = angleAt(lm[2], lm[3], lm[4], aspect);
+        const dTip = dist(lm[4], lm[17], aspect);
+        const dIp = dist(lm[3], lm[17], aspect);
+        return ang > 125 && dTip > dIp * 1.03;
+      };
+
+      const classifyHand = (lm, aspect) => {
+        const thumb = isThumbExtended(lm, aspect);
+        const index = isFingerExtended(lm, 8, aspect);
+        const middle = isFingerExtended(lm, 12, aspect);
+        const ring = isFingerExtended(lm, 16, aspect);
+        const pinky = isFingerExtended(lm, 20, aspect);
+
+        const palm = palmScale(lm, aspect);
+        const okClose = dist(lm[4], lm[8], aspect) < palm * 0.34;
+        const otherExtendedCount = (middle ? 1 : 0) + (ring ? 1 : 0) + (pinky ? 1 : 0);
+
+        if (okClose && !index && otherExtendedCount >= 2) return 'heart';
+        if (thumb && index && middle && ring && pinky) return 'five';
+        if (!thumb && !index && !middle && !ring && !pinky) return 'fist';
+        if (thumb && pinky && !index && !middle && !ring) return 'shaka';
+        if (thumb && index && pinky && !middle && !ring) return 'iloveyou';
+        if (index && !thumb && !middle && !ring && !pinky) return 'one';
+        if (index && middle && !thumb && !ring && !pinky) return 'two';
+        if (index && middle && ring && !thumb && !pinky) return 'three';
+        if (thumb && !index && !middle && !ring && !pinky) return 'thumbsup';
+
+        return null;
+      };
+
+      const getSmoothedHands = (results) => {
+        const now = performance.now();
+        const used = new Set();
+        const out = [];
+        const raws = results.multiHandLandmarks || [];
+
+        raws.forEach((raw, i) => {
+          const cat = results.multiHandedness?.[i]?.categoryName || `Hand${i}`;
+          let key = cat;
+          if (used.has(key)) key = `${cat}-${i}`;
+          used.add(key);
+
+          const prev = state.smoothMap.get(key);
+          let lm;
+
+          if (prev && now - prev.last < 450) {
+            const alpha = 0.42;
+            lm = raw.map((p, idx) => {
+              const q = prev.lm[idx] || p;
+              return {
+                x: q.x + (p.x - q.x) * alpha,
+                y: q.y + (p.y - q.y) * alpha,
+                z: (q.z || 0) + ((p.z || 0) - (q.z || 0)) * alpha
+              };
+            });
+          } else {
+            lm = raw.map(p => ({ x: p.x, y: p.y, z: p.z || 0 }));
+          }
+
+          state.smoothMap.set(key, { lm, last: now });
+          out.push({ key, handedness: cat, landmarks: lm });
+        });
+
+        for (const [k, v] of state.smoothMap.entries()) {
+          if (now - v.last > 900) state.smoothMap.delete(k);
+        }
+
+        return out;
+      };
+
+      const resizeOverlay = () => {
+        const rect = el.camPip.getBoundingClientRect();
+        const dpr = config.reduceEffects ? 1 : Math.min(window.devicePixelRatio || 1, 1.5);
+        const w = Math.max(1, Math.floor(rect.width));
+        const h = Math.max(1, Math.floor(rect.height));
+        const pw = Math.floor(w * dpr);
+        const ph = Math.floor(h * dpr);
+
+        if (el.overlay.width !== pw || el.overlay.height !== ph) {
+          el.overlay.width = pw;
+          el.overlay.height = ph;
+        }
+
+        state.cssW = w;
+        state.cssH = h;
+        state.dpr = dpr;
+      };
+
+      const clearOverlay = () => {
+        resizeOverlay();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, el.overlay.width, el.overlay.height);
+      };
+
+      const spawnParticles = (x, y, color, count = 10) => {
+        if (config.reduceEffects || config.overlay === 'off') return;
+
+        const max = 45;
+        for (let i = 0; i < count && state.particles.length < max; i++) {
+          const a = Math.random() * Math.PI * 2;
+          const sp = 30 + Math.random() * 80;
+          state.particles.push({
+            x,
+            y,
+            vx: Math.cos(a) * sp,
+            vy: Math.sin(a) * sp - 20,
+            life: 0,
+            maxLife: 500 + Math.random() * 500,
+            size: 1.5 + Math.random() * 2.5,
+            color
+          });
+        }
+      };
+
+      const spawnFromHands = (handData, color) => {
+        if (!handData || !handData.length) return;
+        const w = state.cssW;
+        const h = state.cssH;
+
+        handData.forEach(hd => {
+          const p = hd.landmarks[9] || hd.landmarks[0];
+          const x = (1 - p.x) * w;
+          const y = p.y * h;
+          spawnParticles(x, y, color, 8);
+        });
+      };
+
+      const updateParticles = (dt) => {
+        const arr = state.particles;
+        for (let i = arr.length - 1; i >= 0; i--) {
+          const p = arr[i];
+          p.life += dt;
+
+          if (p.life >= p.maxLife) {
+            arr.splice(i, 1);
+            continue;
+          }
+
+          p.x += p.vx * dt / 1000;
+          p.y += p.vy * dt / 1000;
+          p.vy += 35 * dt / 1000;
+          p.vx *= 0.985;
+          p.vy *= 0.985;
+        }
+      };
+
+      const drawParticles = () => {
+        if (!state.particles.length) return;
+
+        const dpr = state.dpr;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.globalCompositeOperation = 'lighter';
+
+        for (const p of state.particles) {
+          const alpha = 1 - p.life / p.maxLife;
+          ctx.beginPath();
+          ctx.fillStyle = hexToRgba(p.color, alpha * 0.75);
+          ctx.arc(p.x, p.y, p.size * (0.6 + alpha * 0.8), 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        ctx.globalCompositeOperation = 'source-over';
+      };
+
+      const drawOverlay = (handData) => {
+        resizeOverlay();
+
+        const w = state.cssW;
+        const h = state.cssH;
+        const dpr = state.dpr;
+
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, el.overlay.width, el.overlay.height);
+
+        if (config.overlay === 'off') return;
+
+        const now = performance.now();
+        const dt = Math.min(100, now - state.lastParticleTime);
+        state.lastParticleTime = now;
+        updateParticles(dt);
+
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.translate(w, 0);
+        ctx.scale(-1, 1);
+
+        if (config.overlay === 'full') {
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          ctx.lineWidth = 2.2;
+          ctx.strokeStyle = hexToRgba(state.accent, 0.82);
+          ctx.shadowBlur = config.reduceEffects ? 0 : 10;
+          ctx.shadowColor = hexToRgba(state.accent, 0.28);
+
+          for (const hd of handData) {
+            const lm = hd.landmarks;
+            ctx.beginPath();
+            for (const [a, b] of HAND_CONNECTIONS) {
+              const pa = lm[a];
+              const pb = lm[b];
+              ctx.moveTo(pa.x * w, pa.y * h);
+              ctx.lineTo(pb.x * w, pb.y * h);
+            }
+            ctx.stroke();
+          }
+
+          ctx.shadowBlur = 0;
+        }
+
+        for (const hd of handData) {
+          const lm = hd.landmarks;
+          for (let i = 0; i < lm.length; i++) {
+            const p = lm[i];
+            const x = p.x * w;
+            const y = p.y * h;
+            const isTip = TIP_INDICES.includes(i);
+
+            ctx.beginPath();
+            ctx.fillStyle = isTip
+              ? hexToRgba(state.accent2, 0.95)
+              : 'rgba(255,255,255,0.86)';
+            ctx.arc(x, y, isTip ? 3.1 : 2.0, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+
+        if (config.debugOverlay) {
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          ctx.font = '11px ui-sans-serif, system-ui, sans-serif';
+          ctx.textBaseline = 'bottom';
+
+          for (const hd of handData) {
+            const p = hd.landmarks[0];
+            const x = (1 - p.x) * w;
+            const y = p.y * h;
+            ctx.fillStyle = 'rgba(255,255,255,0.88)';
+            ctx.fillText(`${hd.handedness}: ${hd.gesture || '—'}`, x + 8, y - 8);
+          }
+        }
+
+        drawParticles();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+      };
+
+      const setAccent = (pair) => {
+        const [p1, p2] = pair;
+        state.accent = p1;
+        state.accent2 = p2;
+        document.documentElement.style.setProperty('--primary', p1);
+        document.documentElement.style.setProperty('--primary-2', p2);
+      };
+
+      const setHoldUI = (progress, gestureId) => {
+        const pct = Math.round(clamp(progress, 0, 1) * 100);
+
+        for (const btn of state.gestureButtons) {
+          btn.classList.toggle('active', btn.dataset.gesture === gestureId);
+        }
+
+        if (!gestureId) {
+          el.gestureHud.classList.remove('show');
+          el.holdFill.style.width = '0%';
+          el.gestureTimer.textContent = '0%';
+          el.gestureName.textContent = '—';
+          el.gestureHint.textContent = 'Esperando ambas manos…';
+          el.currentGestureValue.textContent = '—';
+          return;
+        }
+
+        el.gestureHud.classList.add('show');
+        el.holdFill.style.width = `${pct}%`;
+        el.gestureTimer.textContent = `${pct}%`;
+        el.gestureName.textContent = GESTURE_LABEL[gestureId] || gestureId;
+        el.gestureHint.textContent = 'Manteniendo gesto…';
+        el.currentGestureValue.textContent = GESTURE_LABEL[gestureId] || gestureId;
+      };
+
+      const flashGestureButton = (id) => {
+        const btn = state.gestureButtons.find(b => b.dataset.gesture === id);
+        if (!btn) return;
+        btn.classList.remove('flash');
+        void btn.offsetWidth;
+        btn.classList.add('flash');
+      };
+
+      const resetActivity = () => {
+        state.lastActivity = performance.now();
+      };
+
+      const executeGesture = (gestureId, handData = null) => {
+        const def = GESTURE_DEFS.find(g => g.id === gestureId);
+        if (!def) return;
+
+        resetActivity();
+        spawnFromHands(handData, state.accent);
+        flashGestureButton(gestureId);
+        sfx('success');
+        navigator.vibrate?.(15);
+
+        switch (gestureId) {
+          case 'one': playVideoByIndex(0); break;
+          case 'two': playVideoByIndex(1); break;
+          case 'three': playVideoByIndex(2); break;
+          case 'shaka': playVideoByIndex(3); break;
+          case 'five': playVideoByIndex(4); break;
+          case 'fist': togglePlay(); break;
+          case 'thumbsup': nextVideo(); break;
+          case 'iloveyou': toggleFullscreen(); break;
+          case 'heart':
+            log('Gesto de cierre detectado. Deteniendo sistema…', 'system');
+            setTimeout(closeSystem, 260);
+            break;
+          default: return;
+        }
+
+        if (gestureId !== 'heart') {
+          log(`Gesto ejecutado: ${GESTURE_LABEL[gestureId] || gestureId}`, 'success');
+          toast(`${GESTURE_LABEL[gestureId] || gestureId} activado`, 'success');
+        }
+      };
+
+      const processGesture = (handData) => {
+        const now = performance.now();
+
+        el.handsValue.textContent = String(handData.length);
+
+        if (handData.length) {
+          if (config.debugOverlay) {
+            el.handInfo.textContent = handData.map(h => `${h.handedness}:${h.gesture || '—'}`).join(' / ');
+          } else {
+            el.handInfo.textContent = `Manos: ${handData.length}`;
+          }
+        } else {
+          el.handInfo.textContent = 'Cámara';
+        }
+
+        if (now < state.cooldownUntil) {
+          state.candidate = null;
+          state.lastMatchTime = 0;
+          setHoldUI(0, null);
+          return;
+        }
+
+        if (handData.length !== 2) {
+          if (state.candidate && now - state.lastMatchTime <= 140) return;
+          state.candidate = null;
+          setHoldUI(0, null);
+          return;
+        }
+
+        const g1 = handData[0].gesture;
+        const g2 = handData[1].gesture;
+
+        if (g1 && g1 === g2) {
+          if (state.candidate !== g1) {
+            state.candidate = g1;
+            state.candidateStart = now;
+          }
+
+          state.lastMatchTime = now;
+          const progress = (now - state.candidateStart) / config.holdMs;
+          setHoldUI(progress, g1);
+
+          if (progress >= 1) {
+            executeGesture(g1, handData);
+            state.cooldownUntil = now + 1250;
+            state.candidate = null;
+            state.lastMatchTime = 0;
+            setHoldUI(0, null);
+          }
+        } else {
+          if (state.candidate && now - state.lastMatchTime <= 140) return;
+          state.candidate = null;
+          setHoldUI(0, null);
+        }
+      };
+
+      const ensureHands = () => {
+        if (state.hands) return state.hands;
+
+        if (typeof Hands === 'undefined') {
+          throw new Error('MediaPipe Hands no está disponible. Revisa tu conexión.');
+        }
+
+        state.hands = new Hands({
+          locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+        });
+
+        state.hands.setOptions({
+          maxNumHands: 2,
+          modelComplexity: config.modelComplexity,
+          minDetectionConfidence: 0.65,
+          minTrackingConfidence: 0.5,
+          selfieMode: false
+        });
+
+        state.hands.onResults((results) => {
+          if (!state.running) return;
+
+          const smoothed = getSmoothedHands(results);
+          const handData = smoothed.map(h => ({
+            ...h,
+            gesture: classifyHand(h.landmarks, state.aspect)
+          }));
+
+          drawOverlay(handData);
+          processGesture(handData);
+        });
+
+        return state.hands;
+      };
+
+      const updateRuntimeOptions = () => {
+        workCanvas.width = config.detectionWidth;
+        workCanvas.height = config.detectionHeight;
+        state.aspect = config.detectionWidth / config.detectionHeight;
+
+        if (state.hands) {
+          state.hands.setOptions({
+            maxNumHands: 2,
+            modelComplexity: config.modelComplexity,
+            minDetectionConfidence: 0.65,
+            minTrackingConfidence: 0.5,
+            selfieMode: false
+          });
+        }
+      };
+
+      const startLoop = () => {
+        if (state.raf) return;
+        state.lastProcess = 0;
+        state.raf = requestAnimationFrame(loop);
+      };
+
+      const stopLoop = () => {
+        if (state.raf) cancelAnimationFrame(state.raf);
+        state.raf = 0;
+      };
+
+      const loop = async (ts) => {
+        if (!state.running) {
+          state.raf = 0;
+          return;
+        }
+
+        state.raf = requestAnimationFrame(loop);
+
+        if (document.hidden || state.processing) return;
+
+        const interval = 1000 / Math.max(1, config.targetFPS);
+        if (ts - state.lastProcess < interval) return;
+
+        if (el.camera.readyState < 2) return;
+
+        state.processing = true;
+        const t0 = performance.now();
+
+        try {
+          workCtx.drawImage(el.camera, 0, 0, workCanvas.width, workCanvas.height);
+          await ensureHands().send({ image: workCanvas });
+          state.errors = 0;
+        } catch (err) {
+          console.warn('Error en frame de detección', err);
+          state.errors++;
+          if (state.errors === 5) {
+            log('La detección está fallando de forma repetida. Deteniendo cámara.', 'error');
+            toast('Error en detección. Cámara detenida.', 'error');
+            sfx('error');
+            stopCamera();
+          }
+        } finally {
+          const dt = performance.now() - t0;
+          state.lastProcess = performance.now();
+          state.processing = false;
+          updatePerf(dt);
+        }
+      };
+
+      const updatePerf = (latency) => {
+        state.frames++;
+        state.latency = state.latency ? (state.latency * 0.82 + latency * 0.18) : latency;
+
+        const now = performance.now();
+
+        if (now - state.fpsWindowStart >= 1000) {
+          state.fps = Math.round((state.frames * 1000) / (now - state.fpsWindowStart));
+          state.frames = 0;
+          state.fpsWindowStart = now;
+
+          if (now - state.lastStatsUpdate >= 250) {
+            el.fpsValue.textContent = String(state.fps);
+            el.latencyValue.textContent = `${Math.round(state.latency)} ms`;
+            state.lastStatsUpdate = now;
+          }
+
+          if (config.autoPerf && now - state.lastAutoAdjust >= 3000) {
+            state.lastAutoAdjust = now;
+            autoTune();
+          }
+        }
+      };
+
+      const autoTune = () => {
+        if (state.fps < config.targetFPS * 0.65 && state.tierIndex > 0) {
+          state.tierIndex--;
+          applyTier(false);
+          log(`Auto-rendimiento: bajando a ${TIERS[state.tierIndex].name}`, 'warn');
+        } else if (
+          state.fps >= config.targetFPS * 0.92 &&
+          state.latency < 45 &&
+          state.tierIndex < TIERS.length - 1
+        ) {
+          state.tierIndex++;
+          applyTier(false);
+          log(`Auto-rendimiento: subiendo a ${TIERS[state.tierIndex].name}`, 'system');
+        }
+      };
+
+      const applyTier = (syncUI = true) => {
+        const tier = TIERS[clamp(state.tierIndex, 0, TIERS.length - 1)];
+        config.detectionWidth = tier.det[0];
+        config.detectionHeight = tier.det[1];
+        config.targetFPS = tier.fps;
+        config.modelComplexity = tier.model;
+        config.overlay = tier.overlay;
+        config.preset = tier.name;
+        updateRuntimeOptions();
+
+        el.tierValue.textContent = config.autoPerf ? `auto · ${tier.name}` : tier.name;
+
+        if (syncUI) syncPerfForm();
+      };
+
+      const updateStatus = (online) => {
+        el.statusDot.classList.toggle('online', online);
+        el.statusText.textContent = online ? 'Sistema en línea' : 'Sistema offline';
+        el.startOverlay.classList.toggle('show', !online);
+      };
+
+      const listDevices = async () => {
+        try {
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          const cams = devices.filter(d => d.kind === 'videoinput');
+
+          el.cameraSelect.innerHTML = '<option value="">Predeterminada</option>';
+
+          cams.forEach((cam, idx) => {
+            const opt = document.createElement('option');
+            opt.value = cam.deviceId;
+            opt.textContent = cam.label || `Cámara ${idx + 1}`;
+            el.cameraSelect.appendChild(opt);
+          });
+
+          if (config.deviceId) {
+            el.cameraSelect.value = config.deviceId;
+          }
+        } catch (err) {
+          console.warn('No se pudieron listar cámaras', err);
+        }
+      };
+
+      const requestCamera = async () => {
+        const base = {
+          width: { ideal: config.cameraWidth },
+          height: { ideal: config.cameraHeight },
+          facingMode: 'user'
+        };
+
+        if (config.deviceId) {
+          base.deviceId = { exact: config.deviceId };
+        }
+
+        try {
+          return await navigator.mediaDevices.getUserMedia({ video: base, audio: false });
+        } catch (err) {
+          if (config.deviceId) {
+            log('No se pudo usar la cámara seleccionada. Intentando predeterminada…', 'warn');
+            config.deviceId = '';
+            saveConfig();
+            delete base.deviceId;
+            return await navigator.mediaDevices.getUserMedia({ video: base, audio: false });
+          }
+          throw err;
+        }
+      };
+
+      const showBoot = () => {
+        if (config.reduceEffects) return;
+        el.bootOverlay.classList.add('show');
+        setTimeout(() => el.bootOverlay.classList.remove('show'), 900);
+      };
+
+      const startCamera = async () => {
+        if (state.running) return;
+
+        try {
+          unlockAudio();
+          ensureHands();
+          updateRuntimeOptions();
+          showBoot();
+
+          state.stream = await requestCamera();
+
+          el.camera.srcObject = state.stream;
+          await el.camera.play();
+
+          state.running = true;
+          state.errors = 0;
+          updateStatus(true);
+          el.thanksOverlay.classList.remove('show');
+          stopAttract();
+          startLoop();
+          await listDevices();
+          resetActivity();
+
+          log('Cámara activa. Esperando gestos con ambas manos.', 'success');
+          toast('Cámara iniciada', 'success');
+          sfx('start');
+        } catch (err) {
+          console.error(err);
+          const msg = err?.name === 'NotAllowedError'
+            ? 'Permiso de cámara denegado.'
+            : err?.name === 'NotFoundError'
+              ? 'No se encontró cámara compatible.'
+              : 'No se pudo iniciar la cámara.';
+
+          log(msg, 'error');
+          toast(msg, 'error');
+          sfx('error');
+          updateStatus(false);
+        }
+      };
+
+      const stopCamera = () => {
+        state.running = false;
+        stopLoop();
+
+        if (state.stream) {
+          state.stream.getTracks().forEach(t => t.stop());
+          state.stream = null;
+        }
+
+        el.camera.srcObject = null;
+        state.smoothMap.clear();
+        state.particles.length = 0;
+        state.candidate = null;
+        state.lastMatchTime = 0;
+        state.errors = 0;
+
+        clearOverlay();
+        setHoldUI(0, null);
+        el.handsValue.textContent = '0';
+        el.handInfo.textContent = 'Cámara';
+        updateStatus(false);
+        startAttract();
+      };
+
+      const toggleCamera = () => {
+        if (state.running) stopCamera();
+        else startCamera();
+      };
+
+      const updateVideoLabel = () => {
+        const total = config.videos.length || 0;
+        const current = total ? state.currentVideo + 1 : 0;
+        el.videoLabel.textContent = `Video ${current} / ${total || '—'}`;
+      };
+
+      const playVideoByIndex = (idx) => {
+        if (!config.videos.length) {
+          toast('No hay videos configurados', 'warn');
+          return;
+        }
+
+        state.currentVideo = ((idx % config.videos.length) + config.videos.length) % config.videos.length;
+        const url = config.videos[state.currentVideo];
+
+        setAccent(VIDEO_ACCENTS[state.currentVideo % VIDEO_ACCENTS.length]);
+
+        el.viewport.classList.add('switching');
+        setTimeout(() => el.viewport.classList.remove('switching'), 450);
+
+        if (state.currentUrl !== url) {
+          state.currentUrl = url;
+          el.media.src = url;
+          el.media.load();
+        }
+
+        el.media.play().catch(() => {
+          log('El navegador bloqueó la reproducción automática. Interactúa con el video.', 'warn');
+        });
+
+        updateVideoLabel();
+        resetActivity();
+        log(`Reproduciendo video ${state.currentVideo + 1}`, 'system');
+      };
+
+      const nextVideo = () => playVideoByIndex(state.currentVideo + 1);
+      const prevVideo = () => playVideoByIndex(state.currentVideo - 1);
+
+      const togglePlay = () => {
+        resetActivity();
+        if (!el.media.src) {
+          playVideoByIndex(0);
+          return;
+        }
+        if (el.media.paused) el.media.play();
+        else el.media.pause();
+      };
+
+      const toggleMute = () => {
+        resetActivity();
+        el.media.muted = !el.media.muted;
+        el.muteBtn.textContent = el.media.muted ? '🔇' : '🔊';
+        sfx('ui');
+      };
+
+      const toggleFullscreen = () => {
+        resetActivity();
+        if (!document.fullscreenElement) {
+          el.viewport.requestFullscreen?.().catch(() => toast('Pantalla completa no disponible', 'warn'));
+        } else {
+          document.exitFullscreen?.();
+        }
+      };
+
+      const toggleKiosk = () => {
+        resetActivity();
+        document.body.classList.toggle('kiosk');
+
+        if (document.body.classList.contains('kiosk')) {
+          el.viewport.requestFullscreen?.().catch(() => {});
+          toast('Modo stand activo. Esc para salir.', 'info');
+        } else {
+          if (document.fullscreenElement) document.exitFullscreen?.();
+          toast('Modo stand desactivado', 'info');
+        }
+
+        sfx('ui');
+      };
+
+      const toggleSound = () => {
+        config.soundEnabled = !config.soundEnabled;
+        el.soundBtn.classList.toggle('off', !config.soundEnabled);
+        el.soundBtn.textContent = config.soundEnabled ? '🔊' : '🔇';
+        el.soundCheck.checked = config.soundEnabled;
+        saveConfig();
+
+        if (config.soundEnabled) {
+          unlockAudio();
+          sfx('ui');
+        }
+
+        toast(config.soundEnabled ? 'Sonido activado' : 'Sonido desactivado', 'info');
+      };
+
+      const closeSystem = () => {
+        stopCamera();
+        el.startOverlay.classList.remove('show');
+        el.thanksOverlay.classList.add('show');
+        log('Sistema cerrado con gesto de corazón.', 'system');
+        sfx('close');
+      };
+
+      const buildGestureList = () => {
+        el.gestureList.innerHTML = '';
+
+        for (const g of GESTURE_DEFS) {
+          const btn = document.createElement('button');
+          btn.className = 'gesture-option';
+          btn.type = 'button';
+          btn.dataset.gesture = g.id;
+          btn.innerHTML = `
+            <div class="emoji">${g.emoji}</div>
+            <div>
+              <div class="title">${g.title}</div>
+              <div class="desc">${g.desc}</div>
+            </div>
+            <div class="kbd">${g.key}</div>
+          `;
+          el.gestureList.appendChild(btn);
+        }
+
+        state.gestureButtons = Array.from(el.gestureList.querySelectorAll('.gesture-option'));
+      };
+
+      const syncPerfForm = () => {
+        el.presetSelect.value = config.autoPerf ? 'auto' : config.preset;
+        el.detResSelect.value = `${config.detectionWidth}x${config.detectionHeight}`;
+        el.fpsSelect.value = String(config.targetFPS);
+        el.overlaySelect.value = config.overlay;
+        el.modelSelect.value = String(config.modelComplexity);
+        el.camResSelect.value = `${config.cameraWidth}x${config.cameraHeight}`;
+        el.holdSelect.value = String(config.holdMs);
+        el.reduceFxCheck.checked = !!config.reduceEffects;
+        document.body.classList.toggle('reduce-effects', !!config.reduceEffects);
+        el.tierValue.textContent = config.autoPerf
+          ? `auto · ${TIERS[clamp(state.tierIndex, 0, TIERS.length - 1)].name}`
+          : config.preset;
+      };
+
+      const syncCfgForm = () => {
+        el.videosTextarea.value = config.videos.join('\n');
+        el.cameraSelect.value = config.deviceId || '';
+        el.idleSelect.value = String(config.idleResetSec);
+        el.soundCheck.checked = !!config.soundEnabled;
+        el.debugCheck.checked = !!config.debugOverlay;
+        el.soundBtn.classList.toggle('off', !config.soundEnabled);
+        el.soundBtn.textContent = config.soundEnabled ? '🔊' : '🔇';
+      };
+
+      const openModal = (id) => {
+        document.getElementById(id)?.classList.add('open');
+      };
+
+      const closeModal = (id) => {
+        document.getElementById(id)?.classList.remove('open');
+      };
+
+      const closeAllModals = () => {
+        el.perfModal.classList.remove('open');
+        el.cfgModal.classList.remove('open');
+      };
+
+      const startAttract = () => {
+        stopAttract();
+        state.attractTimer = setInterval(() => {
+          if (state.running || document.hidden) return;
+          state.attractIndex = (state.attractIndex + 1) % ATTRACT_MESSAGES.length;
+          el.attractText.innerHTML = ATTRACT_MESSAGES[state.attractIndex];
+        }, 4200);
+      };
+
+      const stopAttract = () => {
+        if (state.attractTimer) clearInterval(state.attractTimer);
+        state.attractTimer = 0;
+      };
+
+      const idleCheck = () => {
+        if (!state.running || !config.idleResetSec) return;
+        if (performance.now() - state.lastActivity > config.idleResetSec * 1000) {
+          log('Inactividad detectada. Sistema en reposo.', 'warn');
+          stopCamera();
+          sfx('close');
+        }
+      };
+
+      const bindEvents = () => {
+        el.startBtn.addEventListener('click', startCamera);
+        el.powerBtn.addEventListener('click', toggleCamera);
+        el.soundBtn.addEventListener('click', toggleSound);
+        el.standBtn.addEventListener('click', toggleKiosk);
+
+        el.closeThanksBtn.addEventListener('click', () => {
+          el.thanksOverlay.classList.remove('show');
+          el.startOverlay.classList.add('show');
+        });
+
+        el.thanksOverlay.addEventListener('click', (e) => {
+          if (e.target === el.thanksOverlay) {
+            el.thanksOverlay.classList.remove('show');
+            el.startOverlay.classList.add('show');
+          }
+        });
+
+        el.prevBtn.addEventListener('click', prevVideo);
+        el.playBtn.addEventListener('click', togglePlay);
+        el.nextBtn.addEventListener('click', nextVideo);
+        el.muteBtn.addEventListener('click', toggleMute);
+        el.fsBtn.addEventListener('click', toggleFullscreen);
+
+        el.perfBtn.addEventListener('click', () => {
+          syncPerfForm();
+          openModal('perfModal');
+          sfx('ui');
+        });
+
+        el.cfgBtn.addEventListener('click', () => {
+          syncCfgForm();
+          openModal('cfgModal');
+          sfx('ui');
+        });
+
+        document.querySelectorAll('[data-close]').forEach(btn => {
+          btn.addEventListener('click', () => closeModal(btn.dataset.close));
+        });
+
+        [el.perfModal, el.cfgModal].forEach(modal => {
+          modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.classList.remove('open');
+          });
+        });
+
+        el.presetSelect.addEventListener('change', () => {
+          const val = el.presetSelect.value;
+          if (val === 'auto') return;
+
+          const idx = TIERS.findIndex(t => t.name === val);
+          if (idx >= 0) {
+            const tier = TIERS[idx];
+            el.detResSelect.value = `${tier.det[0]}x${tier.det[1]}`;
+            el.fpsSelect.value = String(tier.fps);
+            el.overlaySelect.value = tier.overlay;
+            el.modelSelect.value = String(tier.model);
+          }
+        });
+
+        el.applyPerfBtn.addEventListener('click', () => {
+          const preset = el.presetSelect.value;
+          config.autoPerf = preset === 'auto';
+          config.preset = preset;
+
+          if (preset !== 'auto') {
+            const idx = TIERS.findIndex(t => t.name === preset);
+            if (idx >= 0) {
+              state.tierIndex = idx;
+              applyTier(false);
+            }
+          }
+
+          const [dw, dh] = el.detResSelect.value.split('x').map(Number);
+          config.detectionWidth = dw;
+          config.detectionHeight = dh;
+          config.targetFPS = Number(el.fpsSelect.value);
+          config.overlay = el.overlaySelect.value;
+          config.modelComplexity = Number(el.modelSelect.value);
+          config.holdMs = Number(el.holdSelect.value);
+          config.reduceEffects = el.reduceFxCheck.checked;
+
+          const [cw, ch] = el.camResSelect.value.split('x').map(Number);
+          const cameraChanged = cw !== config.cameraWidth || ch !== config.cameraHeight;
+          config.cameraWidth = cw;
+          config.cameraHeight = ch;
+
+          document.body.classList.toggle('reduce-effects', config.reduceEffects);
+          if (config.reduceEffects) {
+            state.particles.length = 0;
+          }
+
+          updateRuntimeOptions();
+          saveConfig();
+          syncPerfForm();
+          closeModal('perfModal');
+
+          if (cameraChanged && state.running) {
+            log('Cambio de resolución de cámara: reiniciando captura…', 'warn');
+            stopCamera();
+            setTimeout(startCamera, 180);
+          } else {
+            toast('Rendimiento aplicado', 'success');
+            sfx('ui');
+          }
+        });
+
+        el.saveCfgBtn.addEventListener('click', () => {
+          config.deviceId = el.cameraSelect.value || '';
+          config.videos = el.videosTextarea.value
+            .split('\n')
+            .map(s => s.trim())
+            .filter(Boolean);
+
+          config.soundEnabled = el.soundCheck.checked;
+          config.debugOverlay = el.debugCheck.checked;
+          config.idleResetSec = Number(el.idleSelect.value);
+
+          if (!config.videos.length) config.videos = [...DEFAULT_VIDEOS];
+
+          if (state.currentVideo >= config.videos.length) {
+            state.currentVideo = 0;
+          }
+
+          state.currentUrl = '';
+          if (config.videos.length) {
+            el.media.src = config.videos[state.currentVideo];
+          }
+
+          saveConfig();
+          updateVideoLabel();
+          syncCfgForm();
+          closeModal('cfgModal');
+
+          toast('Configuración guardada', 'success');
+          log('Configuración actualizada.', 'system');
+          sfx('ui');
+
+          if (state.running) {
+            stopCamera();
+            setTimeout(startCamera, 180);
+          }
+        });
+
+        el.gestureList.addEventListener('click', (e) => {
+          const btn = e.target.closest('.gesture-option');
+          if (!btn) return;
+          executeGesture(btn.dataset.gesture);
+        });
+
+        el.media.addEventListener('timeupdate', () => {
+          if (state.seeking || !el.media.duration) return;
+          const ratio = el.media.currentTime / el.media.duration;
+          el.seek.value = String(Math.round(ratio * 1000));
+          el.timeLabel.textContent = `${fmtTime(el.media.currentTime)} / ${fmtTime(el.media.duration)}`;
+        });
+
+        el.media.addEventListener('loadedmetadata', () => {
+          el.timeLabel.textContent = `00:00 / ${fmtTime(el.media.duration)}`;
+        });
+
+        el.media.addEventListener('ended', nextVideo);
+
+        el.media.addEventListener('error', () => {
+          log('No se pudo cargar el video. Revisa URL, formato o CORS.', 'error');
+          toast('Error al cargar video', 'error');
+          sfx('error');
+        });
+
+        el.seek.addEventListener('pointerdown', () => { state.seeking = true; });
+        el.seek.addEventListener('pointerup', () => { state.seeking = false; });
+        el.seek.addEventListener('pointercancel', () => { state.seeking = false; });
+        el.seek.addEventListener('input', () => {
+          if (!el.media.duration) return;
+          const ratio = Number(el.seek.value) / 1000;
+          el.media.currentTime = ratio * el.media.duration;
+        });
+
+        document.addEventListener('keydown', (e) => {
+          const tag = document.activeElement?.tagName;
+          if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+          resetActivity();
+
+          if (e.key === 'Escape') {
+            closeAllModals();
+            el.thanksOverlay.classList.remove('show');
+            if (document.body.classList.contains('kiosk')) {
+              document.body.classList.remove('kiosk');
+              if (document.fullscreenElement) document.exitFullscreen?.();
+            }
+            return;
+          }
+
+          switch (e.key.toLowerCase()) {
+            case ' ':
+              e.preventDefault();
+              togglePlay();
+              break;
+            case 'f':
+              toggleFullscreen();
+              break;
+            case 'm':
+              toggleMute();
+              break;
+            case 'n':
+              nextVideo();
+              break;
+            case 'p':
+              prevVideo();
+              break;
+            case 's':
+              toggleCamera();
+              break;
+            case 'x':
+              closeSystem();
+              break;
+            case 'k':
+              toggleKiosk();
+              break;
+            case 'l':
+              toggleSound();
+              break;
+            case '1': executeGesture('one'); break;
+            case '2': executeGesture('two'); break;
+            case '3': executeGesture('three'); break;
+            case '4': executeGesture('shaka'); break;
+            case '5': executeGesture('five'); break;
+          }
+        });
+
+        document.addEventListener('visibilitychange', () => {
+          if (document.hidden) {
+            stopLoop();
+          } else if (state.running) {
+            startLoop();
+          }
+        });
+
+        window.addEventListener('resize', resizeOverlay);
+        window.addEventListener('beforeunload', stopCamera);
+
+        if (window.ResizeObserver) {
+          const ro = new ResizeObserver(() => resizeOverlay());
+          ro.observe(el.camPip);
+        }
+      };
+
+      const init = () => {
+        loadConfig();
+
+        setAccent(VIDEO_ACCENTS[0]);
+
+        const tierFromPreset = TIERS.findIndex(t => t.name === config.preset);
+        state.tierIndex = config.autoPerf
+          ? 2
+          : (tierFromPreset >= 0 ? tierFromPreset : 2);
+
+        if (!config.autoPerf && tierFromPreset >= 0) {
+          applyTier(false);
+        } else {
+          updateRuntimeOptions();
+          el.tierValue.textContent = config.autoPerf
+            ? `auto · ${TIERS[state.tierIndex].name}`
+            : config.preset;
+        }
+
+        buildGestureList();
+        syncPerfForm();
+        syncCfgForm();
+        updateVideoLabel();
+        clearOverlay();
+
+        if (config.videos.length) {
+          state.currentUrl = config.videos[0];
+          el.media.src = state.currentUrl;
+        }
+
+        bindEvents();
+        startAttract();
+        setInterval(idleCheck, 1000);
+
+        if (typeof Hands === 'undefined') {
+          log('No se pudo cargar MediaPipe. Usa los botones manuales.', 'error');
+          toast('MediaPipe no cargó. Revisa conexión o bloqueador.', 'error');
+        } else {
+          log('Sistema listo. Pulsa Iniciar cámara o la tecla S.', 'system');
+        }
+
+        resetActivity();
+      };
+
+      init();
+    })();
+  </script>
+</body>
+</html>
