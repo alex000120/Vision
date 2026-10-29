@@ -4,20 +4,21 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="theme-color" content="#05070d">
-<title>IA Holográfica · Control por Gestos</title>
+<title>IA Holográfica · Control por Gestos v3.0 Ultra</title>
 <style>
   :root {
     --verde: #38ffb0;
     --cian: #00d1ff;
+    --rosa: #ff4d9d;
+    --amarillo: #ffb038;
     --panel: rgba(6,14,24,.88);
     --pip-size: clamp(110px, 26vw, 240px);
     --pip-size-fs: clamp(80px, 14vw, 140px);
-    --accent-primary: var(--verde);
-    --accent-secondary: var(--cian);
   }
-  body.theme-amber { --verde: #ffb038; --cian: #ffdf00; }
+  body.theme-amber  { --verde: #ffb038; --cian: #ffdf00; }
   body.theme-purple { --verde: #d138ff; --cian: #00d1ff; }
-  body.theme-cyan { --verde: #00d1ff; --cian: #38ffb0; }
+  body.theme-red    { --verde: #ff3860; --cian: #ff8538; }
+  body.theme-cyan   { --verde: #00d1ff; --cian: #38ffb0; }
 
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
   html, body { height: 100%; height: 100dvh; overflow: hidden; }
@@ -39,7 +40,7 @@
   }
   #videoStage.loading { animation: videoFlash .7s ease-out; }
   @keyframes videoFlash {
-    0% { box-shadow: 0 0 60px rgba(56,255,176,.6), inset 0 0 60px rgba(56,255,176,.2); }
+    0% { box-shadow: 0 0 60px var(--verde), inset 0 0 60px var(--verde); }
     100% { box-shadow: 0 0 40px rgba(56,255,176,.12), inset 0 0 40px rgba(0,0,0,.5); }
   }
   #video { width: 100%; height: 100%; object-fit: contain; display: block; }
@@ -55,8 +56,8 @@
     content: '';
     position: absolute; bottom: 8px; left: 8px;
     width: 44px; height: 44px;
-    border-left: 2px solid rgba(56,255,176,.5);
-    border-bottom: 2px solid rgba(56,255,176,.5);
+    border-left: 2px solid var(--verde);
+    border-bottom: 2px solid var(--verde);
     border-bottom-left-radius: 10px;
     pointer-events: none; z-index: 4; opacity: .6;
   }
@@ -130,8 +131,8 @@
   .gestos-grid {
     position: relative; z-index: 1;
     display: grid; grid-template-columns: repeat(2, 1fr);
-    gap: 8px; max-width: 400px; width: 100%; margin-top: 10px;
-    max-height: 38vh; overflow-y: auto; padding-right: 2px;
+    gap: 8px; max-width: 420px; width: 100%; margin-top: 10px;
+    max-height: 42vh; overflow-y: auto; padding-right: 2px;
   }
   .gestos-grid > div {
     background: rgba(6,14,24,.8);
@@ -142,26 +143,26 @@
     text-align: left;
   }
   .gestos-grid > div:active { background: rgba(56,255,176,.15); border-color: var(--verde); transform: scale(.97); }
-  .gestos-grid .emoji { font-size: 20px; flex-shrink: 0; filter: drop-shadow(0 0 6px rgba(56,255,176,.3)); }
+  .gestos-grid .emoji { font-size: 20px; flex-shrink: 0; filter: drop-shadow(0 0 6px var(--verde)); }
   .gestos-grid .label { color: #e8f6ff; font-weight: 600; font-size: 11px; }
   .gestos-grid .hint { color: #5a8ba8; font-size: 10px; display: block; margin-top: 1px; }
 
   /* ═══ HUD ═══ */
   #hud {
     position: absolute; top: 12px; left: 12px;
-    display: flex; gap: 6px; flex-wrap: wrap; max-width: calc(100% - 210px);
+    display: flex; gap: 6px; flex-wrap: wrap; max-width: calc(100% - 220px);
     z-index: 15; pointer-events: none; font-size: 11px;
   }
   .chip {
     background: var(--panel); border: 1px solid rgba(56,255,176,.35);
-    border-radius: 999px; padding: 4px 10px;
+    border-radius: 999px; padding: 4px 10px; backdrop-filter: blur(4px);
   }
   .chip b { color: var(--verde); font-weight: 700; }
 
   /* ═══ PROGRESO ═══ */
   #progreso {
     position: absolute; top: 52px; left: 50%; transform: translateX(-50%);
-    min-width: 190px; max-width: 85vw; background: var(--panel);
+    min-width: 200px; max-width: 85vw; background: var(--panel);
     border: 1px solid rgba(56,255,176,.4); border-radius: 10px; padding: 6px 12px;
     font-size: 11px; z-index: 15; display: none;
     box-shadow: 0 0 24px rgba(56,255,176,.25);
@@ -171,7 +172,7 @@
   #progresoBarra { height: 4px; background: #1a2f45; border-radius: 3px; overflow: hidden; }
   #progresoFill {
     height: 100%; background: linear-gradient(90deg, var(--verde), var(--cian));
-    width: 0%; transition: width .08s linear; box-shadow: 0 0 8px rgba(56,255,176,.7);
+    width: 0%; transition: width .08s linear; box-shadow: 0 0 8px var(--verde);
   }
 
   /* ═══ CAM PiP ═══ */
@@ -192,7 +193,7 @@
   #camPiP.fullscreen:active { opacity: 1; }
   #camPiP.gesture-active {
     border-color: var(--verde);
-    box-shadow: 0 0 30px rgba(56,255,176,.7), 0 0 60px rgba(56,255,176,.35), 0 4px 16px rgba(0,0,0,.7);
+    box-shadow: 0 0 30px var(--verde), 0 0 60px rgba(56,255,176,.35), 0 4px 16px rgba(0,0,0,.7);
   }
   #camPiP.waiting:not(.fullscreen)::before {
     content: ''; position: absolute; inset: -4px;
@@ -217,8 +218,8 @@
 
   #camPiP::after {
     content: ''; position: absolute; left: 0; right: 0; top: 0; height: 2px;
-    background: linear-gradient(90deg, transparent, rgba(56,255,176,.5), transparent);
-    box-shadow: 0 0 6px rgba(56,255,176,.4);
+    background: linear-gradient(90deg, transparent, var(--verde), transparent);
+    box-shadow: 0 0 6px var(--verde);
     animation: scanLine 4s linear infinite;
     pointer-events: none; z-index: 5; opacity: .5;
   }
@@ -233,9 +234,9 @@
     border-radius: 50%; background: var(--panel);
     border: 1px solid rgba(56,255,176,.5); color: var(--verde); font-size: 16px; z-index: 15;
     cursor: pointer; display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 0 12px rgba(56,255,176,.2);
+    box-shadow: 0 0 12px rgba(56,255,176,.2); backdrop-filter: blur(4px);
   }
-  .btn-flotante:active { transform: scale(.92); box-shadow: 0 0 20px rgba(56,255,176,.5); }
+  .btn-flotante:active { transform: scale(.92); box-shadow: 0 0 20px var(--verde); }
   #btnAyuda { right: 12px; top: 12px; font-size: 18px; font-weight: 700; }
   #btnSound { right: 58px; top: 12px; }
   #btnMute { right: 104px; top: 12px; }
@@ -247,6 +248,7 @@
     position: absolute; top: 60px; right: 12px; background: var(--panel);
     border: 1px solid rgba(56,255,176,.3); border-radius: 12px; padding: 10px 14px;
     font-size: 11px; line-height: 1.7; color: #8fb4c9; z-index: 14; display: none; max-width: 240px;
+    backdrop-filter: blur(8px);
   }
   #ayuda.visible { display: block; }
   #ayuda b { color: var(--verde); }
@@ -266,8 +268,9 @@
     background: linear-gradient(135deg, var(--verde), var(--cian));
     color: #04140d; border: 0; border-radius: 999px;
     padding: 13px 30px; font-size: 14px; font-weight: 700; cursor: pointer; min-width: 200px;
-    box-shadow: 0 4px 20px rgba(56,255,176,.3);
+    box-shadow: 0 4px 20px rgba(56,255,176,.3); transition: transform .1s;
   }
+  .pantalla button:active { transform: scale(.97); }
   .pantalla button:disabled { opacity: .5; }
   .pantalla button.sec { background: transparent; color: var(--verde); border: 1.5px solid var(--verde); box-shadow: none; }
   .pantalla button.small { padding: 9px 20px; font-size: 12px; min-width: 0; }
@@ -309,7 +312,6 @@
     background: linear-gradient(135deg, var(--verde), var(--cian));
     color: #04140d; border-color: transparent;
   }
-  #presetsGrid button:active { transform: scale(.96); }
 
   #rendInfo {
     font-size: 11px; color: #5a8ba8; max-width: 400px; text-align: center;
@@ -394,7 +396,7 @@
   }
   .texto-celebracion .linea-1,
   .texto-celebracion .linea-2 {
-    background: linear-gradient(135deg, #38ffb0, #00d1ff 60%, #ff4d9d);
+    background: linear-gradient(135deg, var(--verde), var(--cian) 60%, var(--rosa));
     -webkit-background-clip: text; background-clip: text;
     -webkit-text-fill-color: transparent;
     opacity: 0;
@@ -486,6 +488,7 @@
 
   <div id="hud">
     <div class="chip">FPS <b id="fps">0</b></div>
+    <div class="chip">LAT <b id="latencia">0ms</b></div>
     <div class="chip">Gesto <b id="gestoActual">—</b></div>
     <div class="chip">Video <b id="videoActual">—</b>/5</div>
   </div>
@@ -496,10 +499,10 @@
   </div>
 
   <button class="btn-flotante" id="btnAyuda" title="Ayuda de gestos">?</button>
-  <button class="btn-flotante" id="btnSound" title="Sonido activado">🔊</button>
-  <button class="btn-flotante" id="btnMute" title="Audio de video">🔇</button>
+  <button class="btn-flotante" id="btnSound" title="Efectos de sonido">🔊</button>
+  <button class="btn-flotante" id="btnMute" title="Audio del video">🔇</button>
   <button class="btn-flotante" id="btnFull" title="Pantalla completa">🔳</button>
-  <button class="btn-flotante" id="btnRend" title="Rendimiento">⚡</button>
+  <button class="btn-flotante" id="btnRend" title="Rendimiento y Temas">⚡</button>
 
   <div id="ayuda">
     <div class="titulo">🙌 Gestos (2 manos)</div>
@@ -522,18 +525,18 @@
   </div>
 
   <div id="inicio" class="pantalla">
-    <h1>🤖 Control por Gestos (2 manos)</h1>
-    <p>Muestra el mismo gesto con AMBAS manos. Mantén la seña un instante para activarla. Ajusta el rendimiento si va lento en tu dispositivo.</p>
+    <h1>🤖 Control por Gestos v3.0</h1>
+    <p>Muestra el mismo gesto con AMBAS manos frente a la cámara. Mantén la seña un instante para activarla.</p>
     <div id="estado">Pulsa Iniciar para comenzar</div>
     <button id="btnIniciar">Iniciar cámara</button>
-    <button id="btnRend2" class="sec small">⚡ Rendimiento</button>
-    <button id="btnConfig" class="sec small">⚙️ Configurar</button>
+    <button id="btnRend2" class="sec small">⚡ Rendimiento & Temas</button>
+    <button id="btnConfig" class="sec small">⚙️ Configurar URLs</button>
     <div id="error"></div>
   </div>
 
   <div id="rendimiento" class="pantalla oculto">
     <h1>⚡ Rendimiento y Temas</h1>
-    <p>Elige un preset rápido o personaliza los parámetros.</p>
+    <p>Elige un preset rápido o personaliza la experiencia gráfica.</p>
 
     <div id="presetsGrid">
       <button data-preset="minimo">Mínimo</button>
@@ -546,81 +549,82 @@
     <div id="rendInfo"></div>
 
     <div id="rendPanel">
-      <label>Tema de Color
+      <label>Tema Neón Ciber
         <select id="selTema">
-          <option value="default">Verde Ciber (Default)</option>
+          <option value="default">Verde Esmeralda (Default)</option>
           <option value="cyan">Cian Tecnológico</option>
           <option value="amber">Ámbar Matrix</option>
           <option value="purple">Violeta Holográfico</option>
+          <option value="red">Rojo Cyberpunk</option>
         </select>
       </label>
 
       <label>Resolución de procesamiento
         <select id="selResolucion">
-          <option value="128x96">128×96 · más rápido</option>
-          <option value="160x120">160×120</option>
+          <option value="128x96">128×96 · ultra ligero</option>
+          <option value="160x120">160×120 · recomendado netbooks</option>
           <option value="192x144">192×144</option>
           <option value="256x192">256×192</option>
-          <option value="320x240">320×240 · mejor detección</option>
+          <option value="320x240">320×240 · máxima precisión</option>
         </select>
       </label>
 
       <label>FPS máximo de detección
         <select id="selFps">
-          <option value="6">6 · mínimo</option>
-          <option value="8">8</option>
-          <option value="12">12</option>
-          <option value="15">15</option>
-          <option value="20">20</option>
-          <option value="30">30 · máximo</option>
+          <option value="6">6 FPS · modo ahorro</option>
+          <option value="8">8 FPS</option>
+          <option value="12">12 FPS</option>
+          <option value="15">15 FPS</option>
+          <option value="20">20 FPS</option>
+          <option value="30">30 FPS · fluido</option>
         </select>
       </label>
 
-      <label>Calidad del overlay
+      <label>Calidad del Overlay (Esqueleto)
         <select id="selOverlay">
-          <option value="off">Apagado · más rápido</option>
-          <option value="low">Simple · solo puntos</option>
-          <option value="full">Completo · esqueleto</option>
+          <option value="off">Apagado · máximo rendimiento</option>
+          <option value="low">Simple · solo puntos clave</option>
+          <option value="full">Completo · esqueleto + partículas</option>
         </select>
       </label>
 
-      <label>Complejidad del modelo
+      <label>Complejidad del Modelo IA
         <select id="selModelo">
           <option value="0">Lite · rápido</option>
-          <option value="1">Full · más preciso</option>
+          <option value="1">Full · preciso</option>
         </select>
       </label>
 
-      <label>Resolución de cámara
+      <label>Resolución de captura de cámara
         <select id="selCam">
-          <option value="320x240">320×240 · más rápido</option>
+          <option value="320x240">320×240 · optimizado</option>
           <option value="480x360">480×360</option>
-          <option value="640x480">640×480 · más nítido</option>
+          <option value="640x480">640×480 · alta definición</option>
         </select>
       </label>
 
-      <label>Tiempo para activar gesto
+      <label>Tiempo de activación por gesto
         <select id="selTiempo">
-          <option value="400">400 ms · rápido</option>
+          <option value="400">400 ms · veloz</option>
           <option value="600">600 ms · balanceado</option>
           <option value="900">900 ms · estable</option>
-          <option value="1200">1200 ms · muy estable</option>
+          <option value="1200">1200 ms · ultra estable</option>
         </select>
       </label>
 
       <div class="checkbox-row">
         <input type="checkbox" id="chkEfectos">
-        <label for="chkEfectos" style="flex-direction:row;color:#e8f6ff;font-size:12px;">Reducir efectos visuales</label>
+        <label for="chkEfectos" style="flex-direction:row;color:#e8f6ff;font-size:12px;">Reducir efectos visuales / Animaciones</label>
       </div>
     </div>
 
-    <button id="btnAplicarRend">Aplicar</button>
+    <button id="btnAplicarRend">Aplicar Cambios</button>
     <button id="btnCerrarRend" class="sec">Cerrar</button>
   </div>
 
   <div id="config" class="pantalla oculto">
-    <h1>⚙️ Configuración</h1>
-    <p>Cámara externa (opcional) y URLs de videos.</p>
+    <h1>⚙️ Configuración de Fuentes</h1>
+    <p>Cámara IP / externa (opcional) y URLs de los videos.</p>
     <div id="configPanel"></div>
     <button id="btnGuardar">Guardar</button>
     <button id="btnCancelar" class="sec">Cancelar</button>
@@ -634,7 +638,7 @@
         <linearGradient id="gradCorazon" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0%" stop-color="var(--verde)"/>
           <stop offset="55%" stop-color="var(--cian)"/>
-          <stop offset="100%" stop-color="#ff4d9d"/>
+          <stop offset="100%" stop-color="var(--rosa)"/>
         </linearGradient>
         <filter id="glowHolo" x="-50%" y="-50%" width="200%" height="200%">
           <feGaussianBlur stdDeviation="1.6" result="blur"/>
@@ -662,7 +666,7 @@
 </div>
 
 <script>
-/* ═══════════════ AUDIO SINTETIZADO (SCI-FI) ═══════════════ */
+/* ═══════════════ SINTETIZADOR AUDIO SCI-FI (WEB AUDIO API) ═══════════════ */
 let audioCtx = null;
 let sonidoActivo = true;
 
@@ -690,33 +694,33 @@ function reproducirSonido(tipo) {
     if (tipo === 'click') {
       osc.type = 'sine';
       osc.frequency.setValueAtTime(580, ahora);
-      osc.frequency.exponentialRampToValueAtTime(880, ahora + 0.06);
+      osc.frequency.exponentialRampToValueAtTime(880, ahora + 0.05);
       gain.gain.setValueAtTime(0.08, ahora);
-      gain.gain.exponentialRampToValueAtTime(0.001, ahora + 0.08);
+      gain.gain.exponentialRampToValueAtTime(0.001, ahora + 0.07);
       osc.start(ahora);
-      osc.stop(ahora + 0.08);
+      osc.stop(ahora + 0.07);
     } else if (tipo === 'success') {
       osc.type = 'triangle';
       osc.frequency.setValueAtTime(440, ahora);
-      osc.frequency.setValueAtTime(660, ahora + 0.08);
-      osc.frequency.setValueAtTime(880, ahora + 0.16);
+      osc.frequency.setValueAtTime(660, ahora + 0.07);
+      osc.frequency.setValueAtTime(880, ahora + 0.14);
       gain.gain.setValueAtTime(0.1, ahora);
-      gain.gain.exponentialRampToValueAtTime(0.001, ahora + 0.3);
+      gain.gain.exponentialRampToValueAtTime(0.001, ahora + 0.25);
       osc.start(ahora);
-      osc.stop(ahora + 0.3);
+      osc.stop(ahora + 0.25);
     } else if (tipo === 'boot') {
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(300, ahora);
-      osc.frequency.exponentialRampToValueAtTime(1200, ahora + 0.4);
+      osc.frequency.setValueAtTime(260, ahora);
+      osc.frequency.exponentialRampToValueAtTime(1100, ahora + 0.35);
       gain.gain.setValueAtTime(0.12, ahora);
-      gain.gain.exponentialRampToValueAtTime(0.001, ahora + 0.45);
+      gain.gain.exponentialRampToValueAtTime(0.001, ahora + 0.4);
       osc.start(ahora);
-      osc.stop(ahora + 0.45);
+      osc.stop(ahora + 0.4);
     }
   } catch(e) {}
 }
 
-/* ═══════════════ CONFIGURACIÓN ═══════════════ */
+/* ═══════════════ CONFIGURACIÓN Y PRESETS ═══════════════ */
 const VIDEOS_DEFAULT = ['./vid1.mp4', './vid2.mp4', './vid3.mp4', './vid4.mp4', './vid5.mp4'];
 let VIDEOS = VIDEOS_DEFAULT.slice();
 try {
@@ -749,7 +753,7 @@ const CONFIG = {
   duracionEstableMs: 600,
   minFramesEstables: 3,
   cooldownMs: 1200,
-  framesReset: 12, // Búfer de gracia aumentado para evitar falsos resets
+  framesReset: 12,
   procW: 256, procH: 192,
   camWidth: 480, camHeight: 360,
   maxFps: 20,
@@ -781,13 +785,15 @@ function detectarCapacidad() {
   return 'alto';
 }
 
+/* ═══════════════ ESTADO GENERAL Y DOM ═══════════════ */
 const estado = {
   hands:null, corriendo:false, indiceVideo:0,
   gestoActual:null, gestoStartTime:0, framesEstables:0,
   esperandoNeutro:false, comandoEjecutado:null,
   framesSinManos:0, ultimaAccion:0, esFullscreen:false,
   welcomeVisible:false, activeCam: null, enviandoFrame: false,
-  fpsSamples: [], ultimoCorazon: 0, _timerCorazon: null
+  fpsSamples: [], ultimoCorazon: 0, _timerCorazon: null,
+  latencia: 0
 };
 
 const $ = id => document.getElementById(id);
@@ -808,7 +814,7 @@ function actualizarProcCanvas() {
 actualizarProcCanvas();
 
 let cw=0, ch=0, fps=0, framesFps=0, tFps=performance.now(), lastSend=0;
-let lastHudGesto='', lastHudFps=-1;
+let lastHudGesto='', lastHudFps=-1, lastHudLat=-1;
 let lastProgressPct=-1, lastProgressTexto='';
 
 const setEstado = m => { const e=$('estado'); if(e) e.textContent=m; };
@@ -827,7 +833,7 @@ camPiP.addEventListener('transitionend', (e) => {
   if (e.propertyName === 'width') ajustarCanvas();
 });
 
-/* ═══════════════ TEMAS Y EFECTOS ═══════════════ */
+/* ═══════════════ TEMAS Y RENDIMIENTO ═══════════════ */
 function aplicarTema() {
   document.body.className = '';
   if (CONFIG.tema && CONFIG.tema !== 'default') {
@@ -850,7 +856,7 @@ function aplicarPreset(nombre, silencioso) {
       actualizarProcCanvas();
       ajustarCanvas();
       const info = $('rendInfo');
-      if (info) info.textContent = 'Auto: hardware detectado → ' + det + '.';
+      if (info) info.textContent = 'Auto: Hardware detectado → ' + det + '.';
       sincronizarUI();
       guardarConfig();
     }
@@ -891,7 +897,7 @@ function iniciarAutoDeteccion() {
       CONFIG.preset = 'auto';
       guardarConfig();
       const info = $('rendInfo');
-      if (info) info.textContent = 'Auto: ' + Math.round(prom) + ' fps medidos → ajustado a "' + elegido + '".';
+      if (info) info.textContent = 'Auto: ' + Math.round(prom) + ' FPS medidos → ajustado a "' + elegido + '".';
     }
   }, 1000);
 }
@@ -919,8 +925,7 @@ function analizarMano(lm){
   const menique = dist2D(lm[20], w) > dist2D(lm[18], w) * umbral;
   const pulgar  = dist2D(lm[4], lm[5]) > dist2D(lm[3], lm[5]) * 1.35;
 
-  const pulgarArriba = pulgar && !indice && !medio && !anular && !menique
-    && lm[4].y < lm[2].y - 0.02;
+  const pulgarArriba = pulgar && !indice && !medio && !anular && !menique && lm[4].y < lm[2].y - 0.02;
 
   if (pulgarArriba) return { patron: 'pulgar_arriba', dedos: 1 };
 
@@ -966,7 +971,7 @@ function detectarCorazon(manos){
   return cercaIdx && cercaThumb && manosJuntas && apuntaArriba && manosArriba;
 }
 
-/* ═══════════════ LÓGICA DE GESTOS Y ESTABILIDAD ═══════════════ */
+/* ═══════════════ PROCESAMIENTO DE GESTOS ═══════════════ */
 function procesarPatron(patron){
   if (!patron){
     estado.gestoActual = null;
@@ -1109,7 +1114,7 @@ function ocultarMensaje(){
   $('mensajeVideo').classList.add('oculto'); video.style.visibility='visible';
 }
 
-/* ═══════════════ RENDERIZADO OVERLAY ═══════════════ */
+/* ═══════════════ RENDERIZADO EN CANVAS OVERLAY ═══════════════ */
 const CONEXIONES=[[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],
   [10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[13,17],[17,18],[18,19],[19,20],[0,17]];
 
@@ -1121,7 +1126,10 @@ function rrect(x,y,w,h,r){
 
 function dibujarMano(lm,idx,esActiva,patron,esCorazon){
   if (CONFIG.overlayQuality === 'off') return;
-  const color = esCorazon ? '#ff4d9d' : (idx === 0 ? 'var(--verde)' : 'var(--cian)');
+  const mainColor = getComputedStyle(document.body).getPropertyValue('--verde').trim() || '#38ffb0';
+  const secColor  = getComputedStyle(document.body).getPropertyValue('--cian').trim() || '#00d1ff';
+  const color = esCorazon ? '#ff4d9d' : (idx === 0 ? mainColor : secColor);
+
   const pts = lm.map(proy);
   const gr = Math.max(1.5, Math.round(cw/180));
   const rad = Math.max(1.8, gr*1.4);
@@ -1129,7 +1137,7 @@ function dibujarMano(lm,idx,esActiva,patron,esCorazon){
 
   if (!low){
     ctx.lineCap='round'; ctx.lineJoin='round';
-    ctx.strokeStyle=getComputedStyle(document.body).getPropertyValue('--verde') || '#38ffb0';
+    ctx.strokeStyle=color;
     ctx.lineWidth=gr;
     ctx.globalAlpha = esActiva ? 0.9 : 0.35;
     ctx.beginPath();
@@ -1211,6 +1219,11 @@ $('celebracion').addEventListener('click', ocultarCorazon);
 function onResults(res){
   framesFps++;
   const ahora = performance.now();
+  if (estado._startTimeFrame) {
+    estado.latencia = Math.round(ahora - estado._startTimeFrame);
+    if (lastHudLat !== estado.latencia) { $('latencia').textContent = estado.latencia + 'ms'; lastHudLat = estado.latencia; }
+  }
+
   if(ahora-tFps >= 1000){
     fps = Math.round(framesFps*1000/(ahora-tFps));
     framesFps = 0; tFps = ahora;
@@ -1310,7 +1323,7 @@ function actualizarProgreso(patron, numManos){
   if (lastProgressPct !== pctInt) { $('progresoFill').style.width = pct + '%'; lastProgressPct = pctInt; }
 }
 
-/* ═══════════════ CARGA MEDIAPIPE ═══════════════ */
+/* ═══════════════ CARGA DE MEDIAPIPE ═══════════════ */
 let handsPromise = null;
 function cargarMediaPipe(){
   if (handsPromise) return handsPromise;
@@ -1326,7 +1339,7 @@ function cargarMediaPipe(){
   return handsPromise;
 }
 
-/* ═══════════════ BUCLE DE PROCESAMIENTO ═══════════════ */
+/* ═══════════════ BUCLE DE CONTROL PRINCIPAL ═══════════════ */
 async function bucle(){
   if (!estado.corriendo) return;
   const ahora = performance.now();
@@ -1340,6 +1353,7 @@ async function bucle(){
   if (estado.activeCam && estado.hands){
     lastSend = ahora;
     estado.enviandoFrame = true;
+    estado._startTimeFrame = ahora;
     try {
       procCtx.drawImage(estado.activeCam, 0, 0, CONFIG.procW, CONFIG.procH);
       await estado.hands.send({ image: procCanvas });
@@ -1351,7 +1365,7 @@ async function bucle(){
   if (estado.corriendo) requestAnimationFrame(bucle);
 }
 
-/* ═══════════════ INICIO DE CÁMARA ═══════════════ */
+/* ═══════════════ INICIO DE CÁMARA & DETECTOR ═══════════════ */
 async function iniciar(){
   const btn = $('btnIniciar');
   btn.disabled = true; btn.textContent = 'Iniciando...'; setError('');
@@ -1364,7 +1378,7 @@ async function iniciar(){
     await cargarMediaPipe();
 
     if (CONFIG.camaraUrl){
-      setEstado('2/4 · Conectando a cámara externa...');
+      setEstado('2/4 · Conectando a cámara IP...');
       cam.style.display = 'none';
       camImg.style.display = 'block';
       camImg.src = CONFIG.camaraUrl;
@@ -1384,11 +1398,7 @@ async function iniciar(){
         cam.srcObject.getTracks().forEach(t => t.stop());
       }
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: CONFIG.camWidth },
-          height: { ideal: CONFIG.camHeight },
-          frameRate: { ideal: 30, max: 30 }
-        },
+        video: { width: { ideal: CONFIG.camWidth }, height: { ideal: CONFIG.camHeight }, frameRate: { ideal: 30, max: 30 } },
         audio: false
       });
       cam.srcObject = stream;
@@ -1411,7 +1421,7 @@ async function iniciar(){
     if (estado.activeCam.videoWidth || estado.activeCam.naturalWidth) ajustarAspecto();
     else estado.activeCam.addEventListener('load', ajustarAspecto, { once:true });
 
-    setEstado('3/4 · Iniciando detector...');
+    setEstado('3/4 · Inicializando IA...');
     estado.hands = new Hands({ locateFile: f => CONFIG.mediapipeBase + '/' + f });
     estado.hands.setOptions({
       maxNumHands: CONFIG.maxNumHands,
@@ -1442,7 +1452,7 @@ async function iniciar(){
 
 $('btnIniciar').addEventListener('click', iniciar);
 
-/* ═══════════════ RENDIMIENTO Y CONFIGURACIÓN UI ═══════════════ */
+/* ═══════════════ INTERFAZ Y RENDIMIENTO ═══════════════ */
 function sincronizarUI(){
   const el = $('selResolucion'); if (el) el.value = CONFIG.procW + 'x' + CONFIG.procH;
   const f = $('selFps'); if (f) f.value = String(CONFIG.maxFps);
@@ -1560,7 +1570,7 @@ $('btnCerrarRend').addEventListener('click', ()=>{
   }
 });
 
-/* ═══════════════ CONFIGURACIÓN DE VIDEOS / CÁMARA IP ═══════════════ */
+/* ═══════════════ CONFIGURACIÓN Y CONTROLES ═══════════════ */
 $('btnConfig').addEventListener('click', ()=>{
   reproducirSonido('click');
   construirPanelConfig();
@@ -1650,7 +1660,7 @@ function construirPanelConfig(){
 
   const hintCam = document.createElement('div');
   hintCam.className = 'hint';
-  hintCam.textContent = 'Deja vacío para usar la cámara web del dispositivo.';
+  hintCam.textContent = 'Deja vacío para usar la cámara integrada.';
   p.appendChild(hintCam);
 
   for(let i=0;i<5;i++){
@@ -1665,7 +1675,7 @@ function construirPanelConfig(){
   }
 }
 
-/* ═══════════════ INICIALIZACIÓN GLOBAL ═══════════════ */
+/* ═══════════════ ARRANQUE GENERAL ═══════════════ */
 aplicarTema();
 ajustarCanvas();
 sincronizarUI();
