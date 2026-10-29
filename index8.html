@@ -482,6 +482,23 @@
   body.reduce-effects #fx { display: none; }
   body.reduce-effects #reticula { transition: none; }
   body.reduce-effects .gestos-grid > [role=button].pista { box-shadow: none; transform: none; }
+  /* Ambilight: el borde del escenario toma el color del video */
+  #ambi { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 4; transition: box-shadow .6s ease; }
+  body.reduce-effects #ambi { display: none; }
+
+  /* Recuerdo fotográfico (opcional) */
+  #recuerdo {
+    position: absolute; left: clamp(10px, 3vw, 28px); bottom: clamp(36px, 8vh, 70px); z-index: 3;
+    width: clamp(96px, 26vmin, 190px); rotate: -4deg; text-align: center;
+    animation: fadeUp .9s cubic-bezier(.2,.7,.2,1) 2.4s both;
+  }
+  #recuerdo[hidden] { display: none; }
+  #recuerdo img { width: 100%; display: block; border-radius: 6px; box-shadow: 0 0 24px rgba(56,255,176,.5), 0 6px 18px rgba(0,0,0,.6); }
+  #recuerdo a {
+    display: inline-block; margin-top: 8px; padding: 6px 14px; border-radius: 999px; font-size: 11px; font-weight: 700;
+    color: #04140d; background: linear-gradient(135deg, var(--verde), var(--cian)); text-decoration: none;
+  }
+  body.reduce-effects #recuerdo { animation: none; }
 </style>
 </head>
 <body>
@@ -489,6 +506,7 @@
 
   <div id="videoStage">
     <video id="video" playsinline loop muted></video>
+    <div id="ambi"></div>
     <div id="mensajeVideo">Muestra una seña con AMBAS manos frente a la cámara</div>
   </div>
 
@@ -650,6 +668,11 @@
         <input type="checkbox" id="chkSonidos">
         <label for="chkSonidos" style="flex-direction:row;color:#e8f6ff;font-size:12px;">Sonidos de confirmación</label>
       </div>
+
+      <div class="checkbox-row">
+        <input type="checkbox" id="chkRecuerdo">
+        <label for="chkRecuerdo" style="flex-direction:row;color:#e8f6ff;font-size:12px;">Recuerdo fotográfico al cerrar (se queda en este dispositivo)</label>
+      </div>
     </div>
 
     <button id="btnAplicarRend">Aplicar</button>
@@ -693,6 +716,10 @@
     </div>
     <div class="sparkles" aria-hidden="true">
       <span>✨</span><span>✨</span><span>✨</span><span>✨</span><span>✨</span>
+    </div>
+    <div id="recuerdo" hidden>
+      <img id="recImg" alt="Recuerdo de tu visita">
+      <a id="recDl" role="button">Guardar 💾</a>
     </div>
     <div class="tap-cerrar">toca para cerrar</div>
   </div>
@@ -782,7 +809,7 @@ const CONFIG = {
   modeloUrl: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
   delegado: 'GPU',
   inactividadS: 0,
-  sonidos: true, nombre: 'Alex', cierre1: 'gracias por visitar', cierre2: 'nuestro stand ✨',
+  sonidos: true, recuerdo: false, nombre: 'Alex', cierre1: 'gracias por visitar', cierre2: 'nuestro stand ✨',
   camaraUrl: ''
 };
 
@@ -1235,11 +1262,12 @@ function mostrarCorazon(){
     path.style.animation = '';
   }
 
+  tomarRecuerdo();
   el.classList.remove('oculto');
   fx.c.classList.add('top'); fxCorazon(); sonido('corazon'); contarVisita();
 
   clearTimeout(estado._timerCorazon);
-  estado._timerCorazon = setTimeout(ocultarCorazon, 9000);
+  estado._timerCorazon = setTimeout(ocultarCorazon, CONFIG.recuerdo ? 14000 : 9000);
 }
 
 function ocultarCorazon(){
@@ -1247,6 +1275,7 @@ function ocultarCorazon(){
   const estabaVisible = el && !el.classList.contains('oculto');
   if (el) el.classList.add('oculto');
   fx.c.classList.remove('top');
+  $('recuerdo').hidden = true; $('recImg').removeAttribute('src');
   clearTimeout(estado._timerCorazon);
   if (estabaVisible) volverInicio();
 }
@@ -1566,6 +1595,8 @@ function sincronizarUI(){
   if (ef) ef.checked = !!CONFIG.reduceEffects;
   const so = document.getElementById('chkSonidos');
   if (so) so.checked = !!CONFIG.sonidos;
+  const re = document.getElementById('chkRecuerdo');
+  if (re) re.checked = !!CONFIG.recuerdo;
 
   document.querySelectorAll('#presetsGrid button').forEach(b => {
     b.classList.toggle('activo', b.dataset.preset === CONFIG.preset);
@@ -1593,6 +1624,7 @@ function leerUIRendimiento(){
   CONFIG.duracionEstableMs = parseInt($('selTiempo').value, 10);
   CONFIG.reduceEffects = $('chkEfectos').checked;
   CONFIG.sonidos = $('chkSonidos').checked;
+  CONFIG.recuerdo = $('chkRecuerdo').checked;
 
   CONFIG.preset = 'custom';
   actualizarProcCanvas();
@@ -1849,7 +1881,7 @@ setInterval(() => {
 }, 1000);
 
 /* ═══════════════ FX HOLOGRÁFICO (partículas a media resolución) ═══════════════ */
-const fx = { c: $('fx'), x: $('fx').getContext('2d'), p: [], run: false, W: 0, H: 0, k: 1, t: 0, max: 140 };
+const fx = { c: $('fx'), x: $('fx').getContext('2d'), p: [], run: false, W: 0, H: 0, k: 1, t: 0, max: 140, trail: [[], []], arco: null, arcoT: 0 };
 function fxTam(){
   fx.W = fx.c.width  = Math.max(1, Math.round(innerWidth  * 0.5));
   fx.H = fx.c.height = Math.max(1, Math.round(innerHeight * 0.5));
@@ -1864,11 +1896,54 @@ function fxAdd(x, y, vx, vy, vida, r, col, forzar){
   if (!fx.run){ fx.run = true; fx.t = performance.now(); requestAnimationFrame(fxLoop); }
 }
 
+function fxArrancar(){
+  if (!fx.run){ fx.run = true; fx.t = performance.now(); requestAnimationFrame(fxLoop); }
+}
+
 function fxLoop(t){
   const dt = Math.min(0.05, (t - fx.t) / 1000); fx.t = t;
-  const g = fx.x;
+  const g = fx.x, ahora = performance.now(), k = fx.k;
   g.clearRect(0, 0, fx.W, fx.H);
   g.globalCompositeOperation = 'lighter';
+  g.lineCap = 'round';
+
+  // Cintas de luz: rastro del índice (pintar en el aire)
+  for (let h = 0; h < 2; h++){
+    const tr = fx.trail[h];
+    while (tr.length && ahora - tr[0].t > 550) tr.shift();
+    if (tr.length < 2) continue;
+    g.strokeStyle = tr.col;
+    for (let i = 1; i < tr.length; i++){
+      const a = Math.max(0, 1 - (ahora - tr[i].t) / 550);
+      g.globalAlpha = a * 0.8; g.lineWidth = (1 + 5 * a) * k;
+      g.beginPath(); g.moveTo(tr[i - 1].x, tr[i - 1].y); g.lineTo(tr[i].x, tr[i].y); g.stroke();
+    }
+  }
+
+  // Plasma entre las dos manos: orbe + rayo (más grande cuanto más cerca están)
+  const A = fx.arco, arcoVivo = A && ahora - fx.arcoT < 160;
+  if (arcoVivo){
+    const dx = A.bx - A.ax, dy = A.by - A.ay, d = Math.hypot(dx, dy) || 1;
+    const nx = -dy / d, ny = dx / d, mx = (A.ax + A.bx) / 2, my = (A.ay + A.by) / 2;
+    const r = Math.min(fx.W * 0.16, d * 0.18) + 4 * k;
+    const gr = g.createRadialGradient(mx, my, 0, mx, my, r * 2.2);
+    gr.addColorStop(0, A.rosa ? 'rgba(255,77,157,.85)' : 'rgba(120,255,220,.85)');
+    gr.addColorStop(0.4, A.rosa ? 'rgba(255,77,157,.25)' : 'rgba(0,209,255,.25)');
+    gr.addColorStop(1, 'rgba(0,0,0,0)');
+    g.globalAlpha = 1; g.fillStyle = gr; g.beginPath(); g.arc(mx, my, r * 2.2, 0, 6.2832); g.fill();
+    for (let j = 0; j < 2; j++){
+      g.beginPath(); g.moveTo(A.ax, A.ay);
+      for (let i = 1; i < 9; i++){
+        const f = i / 9, o = (Math.random() - .5) * d * .12 * Math.sin(f * 3.1416);
+        g.lineTo(A.ax + dx * f + nx * o, A.ay + dy * f + ny * o);
+      }
+      g.lineTo(A.bx, A.by);
+      g.strokeStyle = j ? '#ffffff' : (A.rosa ? '#ff4d9d' : '#00d1ff');
+      g.lineWidth = (j ? 1 : 3.5) * k; g.globalAlpha = j ? 0.9 : 0.5; g.stroke();
+    }
+  }
+
+  // Partículas
   for (let i = fx.p.length - 1; i >= 0; i--){
     const q = fx.p[i];
     q.l -= dt;
@@ -1879,17 +1954,21 @@ function fxLoop(t){
     g.beginPath(); g.arc(q.x, q.y, q.r * (0.4 + 0.6 * a), 0, 6.2832); g.fill();
   }
   g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
-  if (fx.p.length) requestAnimationFrame(fxLoop);
+  if (fx.p.length || arcoVivo || fx.trail[0].length > 1 || fx.trail[1].length > 1) requestAnimationFrame(fxLoop);
   else { fx.run = false; g.clearRect(0, 0, fx.W, fx.H); }
 }
 
-/* Estela luminosa en yemas de índice y pulgar (más densa si el gesto coincide en ambas manos) */
+/* Cada mano deja una cinta de luz (índice) y chispas (índice y pulgar); con 2 manos aparece el plasma */
 function fxManos(manos, rosa, activo){
   if (CONFIG.reduceEffects || CONFIG.overlayQuality === 'off') return;
   if (!fx.W) fxTam();
-  const n = activo ? 3 : 1, k = fx.k;
+  const n = activo ? 3 : 1, k = fx.k, ahora = performance.now();
+  for (let h = manos.length; h < 2; h++) fx.trail[h].length = 0;
   for (let h = 0; h < manos.length; h++){
-    const col = rosa ? '#ff4d9d' : COLORES[h % 2];
+    const col = rosa ? '#ff4d9d' : COLORES[h % 2], tr = fx.trail[h];
+    tr.col = col;
+    const ix = manos[h][8];
+    tr.push({ x: (1 - ix.x) * fx.W, y: ix.y * fx.H, t: ahora });
     for (const idx of [8, 4]){
       const p = manos[h][idx];
       for (let i = 0; i < n; i++)
@@ -1897,6 +1976,12 @@ function fxManos(manos, rosa, activo){
               .6 + Math.random() * .5, (2 + Math.random() * 3) * k, col);
     }
   }
+  if (manos.length === 2){
+    const a = manos[0][9], b = manos[1][9];
+    fx.arco = { ax: (1 - a.x) * fx.W, ay: a.y * fx.H, bx: (1 - b.x) * fx.W, by: b.y * fx.H, rosa };
+    fx.arcoT = ahora;
+  } else fx.arco = null;
+  fxArrancar();
 }
 
 /* Corazón que se expande al cerrar (curva paramétrica del corazón) */
@@ -2026,6 +2111,53 @@ function camposExtra(){
   h.className = 'hint'; h.textContent = '📊 Cierres con corazón · hoy: ' + v.hoy + ' · total: ' + v.total;
   p.appendChild(h);
 }
+
+/* ═══════════════ AMBILIGHT: el borde toma el color medio del video ═══════════════ */
+const ambX = Object.assign(document.createElement('canvas'), { width: 4, height: 4 }).getContext('2d', { willReadFrequently: true });
+let ambOk = true;
+setInterval(() => {
+  if (!ambOk || CONFIG.reduceEffects || document.hidden) return;
+  if (!video.getAttribute('src')){ $('ambi').style.boxShadow = ''; return; }
+  if (video.paused || video.readyState < 2) return;
+  try {
+    ambX.drawImage(video, 0, 0, 4, 4);
+    const d = ambX.getImageData(0, 0, 4, 4).data;
+    let r = 0, g = 0, b = 0;
+    for (let i = 0; i < 64; i += 4){ r += d[i]; g += d[i + 1]; b += d[i + 2]; }
+    r /= 16; g /= 16; b /= 16;
+    const f = Math.min(2, 200 / Math.max(r, g, b, 1));   // realza el color sin quemarlo
+    $('ambi').style.boxShadow = 'inset 0 0 90px 6px rgba(' + Math.round(r * f) + ',' + Math.round(g * f) + ',' + Math.round(b * f) + ',.55)';
+  } catch(e){ ambOk = false; $('ambi').style.boxShadow = ''; }   // video de otro origen sin CORS: se desactiva
+}, 450);
+
+/* ═══════════════ RECUERDO FOTOGRÁFICO (opcional, solo en el dispositivo) ═══════════════ */
+function tomarRecuerdo(){
+  $('recuerdo').hidden = true;
+  const src = estado.activeCam;
+  if (!CONFIG.recuerdo || !src) return;
+  try {
+    const w = src.videoWidth || src.naturalWidth, h = src.videoHeight || src.naturalHeight;
+    if (!w) return;
+    const W = 480, Hf = Math.round(W * h / w), c = document.createElement('canvas'), g = c.getContext('2d');
+    c.width = W + 40; c.height = Hf + 110;
+    g.fillStyle = '#05070d'; g.fillRect(0, 0, c.width, c.height);
+    g.save(); g.translate(20 + W, 20); g.scale(-1, 1); g.drawImage(src, 0, 0, W, Hf); g.restore();
+    g.fillStyle = 'rgba(56,255,176,.12)'; g.fillRect(20, 20, W, Hf);
+    g.fillStyle = 'rgba(0,0,0,.14)';
+    for (let y = 20; y < Hf + 20; y += 4) g.fillRect(20, y, W, 1.5);
+    const gr = g.createLinearGradient(0, 0, c.width, c.height);
+    gr.addColorStop(0, '#38ffb0'); gr.addColorStop(.55, '#00d1ff'); gr.addColorStop(1, '#ff4d9d');
+    g.strokeStyle = gr; g.lineWidth = 4; g.strokeRect(2, 2, c.width - 4, c.height - 4);
+    g.fillStyle = gr; g.textAlign = 'center'; g.font = '700 26px -apple-system,Segoe UI,sans-serif';
+    g.fillText((CONFIG.cierre1 + ' ' + CONFIG.cierre2).trim(), c.width / 2, Hf + 68);
+    g.font = '14px monospace'; g.fillStyle = '#5a8ba8';
+    g.fillText(new Date().toLocaleDateString('es'), c.width / 2, Hf + 94);
+    const url = c.toDataURL('image/jpeg', .88);
+    $('recImg').src = url; $('recDl').href = url; $('recDl').download = 'recuerdo-' + Date.now() + '.jpg';
+    $('recuerdo').hidden = false;
+  } catch(e){ console.warn('Recuerdo no disponible:', e); }
+}
+$('recDl').addEventListener('click', e => e.stopPropagation());
 
 /* ═══════════════ ARRANQUE ═══════════════ */
 fxTam();
